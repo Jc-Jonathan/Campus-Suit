@@ -1,0 +1,16 @@
+[
+  {
+    "id": "loan1",
+    "name": "Campus Flexi Loan",
+    "rate": 6.5,
+    "maxAmount": 10000,
+    "description": "Flexible repayment options with a competitive fixed interest rate."
+  },
+  {
+    "id": "loan2",
+    "name": "Study Abroad Support Loan",
+    "rate": 7.2,
+    "maxAmount": 20000,
+    "description": "Designed for students pursuing short-term international programs."
+  }
+]

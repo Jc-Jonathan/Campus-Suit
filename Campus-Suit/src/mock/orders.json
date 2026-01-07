@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ord1",
+    "status": "processing",
+    "total": 54.49,
+    "createdAt": "2025-10-05"
+  },
+  {
+    "id": "ord2",
+    "status": "delivered",
+    "total": 89.99,
+    "createdAt": "2025-09-12"
+  }
+]
