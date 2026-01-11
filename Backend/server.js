@@ -1,24 +1,35 @@
 const express = require('express');
 const cors = require('cors');
 const connectMongo = require('./connectdb');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+const loansDir = path.join(uploadsDir, 'loans');
+
+// Create directories if they don't exist
+[uploadsDir, loansDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`Created directory: ${dir}`);
+  }
+});
+
 /* 🔹 Middleware */
-// Update CORS configuration in server.js
 app.use(cors({
-  origin: [
-    'http://localhost:19006', 
-    'http://192.168.31.130:19006', 
-    'exp://192.168.31.130:19000'
-  ],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // 🔴 REQUIRED for form-data
+
+// Parse JSON and URL-encoded bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /* 🔹 Connect to MongoDB */
 connectMongo();
@@ -33,9 +44,14 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/scholarships', require('./routes/scholarships'));
 app.use('/api/scholarshipApplications', require('./routes/scholarshipApplications'));
+app.use('/api/loans', require('./routes/Loans'));
+app.use('/api/loanApplys', require('./routes/LoanApplys'));
 
 /* 🔹 Serve uploaded files */
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+// Log static file serving configuration
+console.log('Serving static files from:', path.join(__dirname, 'public', 'uploads'));
 
 /* 🔹 Server */
 const PORT = process.env.PORT || 5000;

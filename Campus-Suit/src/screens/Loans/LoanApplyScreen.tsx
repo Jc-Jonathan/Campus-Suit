@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { PickedFile } from '../../components/DocumentPickerButton';
 import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
@@ -7,11 +8,12 @@ import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { DocumentPickerButton } from '../../components/DocumentPickerButton';
 import { theme } from '../../theme/theme';
+import { API_URL } from '../../config';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 export type LoanApplyProps = NativeStackScreenProps<LoansStackParamList, 'LoanApply'>;
 
-export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
+export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route }) => {
   // Personal information
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
@@ -29,6 +31,9 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
   // Loan details
   const [amount, setAmount] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [idDocument, setIdDocument] = useState<PickedFile | null>(null);
+  const [schoolIdDocument, setSchoolIdDocument] = useState<PickedFile | null>(null);
+  const [agreementDocument, setAgreementDocument] = useState<PickedFile | null>(null);
 
   // Declaration checkboxes
   const [confirmAccurate, setConfirmAccurate] = useState(false);
@@ -39,21 +44,137 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
   const [signature, setSignature] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [loanTitle, setLoanTitle] = useState('');
+  const [loadingLoan, setLoadingLoan] = useState(true);
+  const [emailError, setEmailError] = useState('');
 
   const submissionDate = new Date().toISOString().split('T')[0];
 
+  // Fetch loan title on component mount
+  useEffect(() => {
+    const fetchLoanTitle = async () => {
+      try {
+        const { id } = route.params || {};
+        if (!id) return;
+        
+        const response = await fetch(`${API_URL}/api/loans/loan/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch loan details');
+        
+        const data = await response.json();
+        setLoanTitle(data.title || 'Loan');
+      } catch (error) {
+        console.error('Error fetching loan details:', error);
+        setLoanTitle('Loan');
+      } finally {
+        setLoadingLoan(false);
+      }
+    };
+
+    fetchLoanTitle();
+  }, [route.params]);
+
    const canSubmit = confirmAccurate && agreeTerms && understandRisk;
 
-  const handleSubmit = () => {
-    if (!canSubmit) {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (text && !validateEmail(text)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (loading) return;
+
+    // Validate email before submission
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert('Application submitted', 'Loan application submitted (mock).');
-      navigation.navigate('LoanStatus');
-    }, 800);
+    setEmailError('');
+
+    try {
+      const formData = new FormData();
+      
+      // Add all form fields to formData
+      formData.append('fullName', fullName);
+      formData.append('dob', dob);
+      formData.append('gender', gender);
+      formData.append('phone', phone);
+      formData.append('email', email);
+      if (studentId) formData.append('studentId', studentId);
+      formData.append('program', program);
+      formData.append('yearOfStudy', yearOfStudy);
+      formData.append('loanTitle', loanTitle);
+      formData.append('amount', amount);
+      formData.append('purpose', purpose);
+      if (signature) formData.append('signature', signature);
+      formData.append('confirmAccurate', confirmAccurate.toString());
+      formData.append('agreeTerms', agreeTerms.toString());
+      formData.append('understandRisk', understandRisk.toString());
+
+      // Append files if they exist
+      if (idDocument) {
+        formData.append('idDocument', {
+          uri: idDocument.uri,
+          type: idDocument.type || 'application/octet-stream',
+          name: idDocument.name || 'idDocument.jpg'
+        } as any);
+      }
+
+      if (schoolIdDocument) {
+        formData.append('schoolIdDocument', {
+          uri: schoolIdDocument.uri,
+          type: schoolIdDocument.type || 'application/octet-stream',
+          name: schoolIdDocument.name || 'schoolIdDocument.jpg'
+        } as any);
+      }
+
+      if (agreementDocument) {
+        formData.append('agreementDocument', {
+          uri: agreementDocument.uri,
+          type: agreementDocument.type || 'application/pdf',
+          name: agreementDocument.name || 'agreementDocument.pdf'
+        } as any);
+      }
+
+      const response = await fetch(`${API_URL}/api/loanApplys`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit application');
+      }
+
+      Alert.alert(
+        'Application Submitted',
+        'Your loan application has been submitted successfully!',
+        [{ 
+          text: 'OK', 
+          onPress: () => navigation.navigate('LoanStatus', { id: data.loanId || '' })
+        }]
+      );
+    } catch (error) {
+  console.error('Error submitting application:', error);
+  const errorMessage = error instanceof Error ? error.message : 'Failed to submit application';
+  Alert.alert('Error', errorMessage);
+} finally {
+  setLoading(false);
+}
   };
 
   const handleDobChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -75,31 +196,49 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
     <View style={styles.container}>
       <HeaderTab />
       <Header title="Loan application" />
+      {!loadingLoan && (
+        <Text style={styles.applyTitle}>
+          Applying for: <Text style={styles.loanTitle}>{loanTitle}</Text>
+        </Text>
+      )}
       <ScrollView contentContainerStyle={styles.content}>
         {/* Personal Information */}
         <Text style={styles.sectionTitle}>Personal information</Text>
-        <AppInput label="Full name" value={fullName} onChangeText={setFullName} />
+        <AppInput 
+        label="Full name" 
+        placeholder='Enter Your Full Name'
+        value={fullName} onChangeText={setFullName}
+         />
+
         <AppInput
           label="Date of birth"
           value={dob}
           placeholder="YYYY-MM-DD"
           onFocus={() => setShowDobPicker(true)}
         />
-        <AppInput label="Gender" value={gender} onChangeText={setGender} />
+        <AppInput 
+        label="Gender" 
+        placeholder='Enter Your Gender'
+        value={gender} onChangeText={setGender} />
         <AppInput
           label="Phone number"
+          placeholder='Enter your Phone Number'
           value={phone}
           keyboardType="phone-pad"
           onChangeText={setPhone}
         />
         <AppInput
           label="Email address"
+          placeholder='Enter your Email'
+          required={true}
           value={email}
           keyboardType="email-address"
-          onChangeText={setEmail}
+          onChangeText={handleEmailChange}
         />
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         <AppInput
           label="Student ID (if applicable)"
+          placeholder='Enter your Student ID'
           value={studentId}
           onChangeText={setStudentId}
         />
@@ -108,11 +247,13 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Academic information</Text>
         <AppInput
           label="Program of study"
+          placeholder='Enter your Program of study'
           value={program}
           onChangeText={setProgram}
         />
         <AppInput
           label="Year of study"
+          placeholder='Enter your Year of study'
           value={yearOfStudy}
           onChangeText={setYearOfStudy}
         />
@@ -121,12 +262,14 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Loan details</Text>
         <AppInput
           label="Loan amount requested"
+          placeholder='Enter your Loan amount requested'
           value={amount}
           onChangeText={setAmount}
           keyboardType="numeric"
         />
         <AppInput
           label="Loan purpose (e.g. tuition, accommodation, emergency, books, transport)"
+          placeholder='Enter your Loan purpose'
           value={purpose}
           multiline
           onChangeText={setPurpose}
@@ -134,8 +277,21 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation }) => {
 
         {/* Required Documents */}
         <Text style={styles.sectionTitle}>Required documents</Text>
-        <DocumentPickerButton label="National ID / Passport" />
-        <DocumentPickerButton label="School ID" />
+        <DocumentPickerButton 
+          label="Upload Agreement Document" 
+          onDocumentPicked={setAgreementDocument}
+          value={agreementDocument?.name}
+        />
+        <DocumentPickerButton 
+          label="National ID / Passport" 
+          onDocumentPicked={setIdDocument}
+          value={idDocument?.name}
+        />
+        <DocumentPickerButton 
+          label="School ID" 
+          onDocumentPicked={setSchoolIdDocument}
+          value={schoolIdDocument?.name}
+        />
 
         {/* Declaration */}
         <Text style={styles.sectionTitle}>Declaration</Text>
@@ -232,5 +388,22 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     color: theme.colors.textMuted,
+  },
+  applyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  loanTitle: {
+    color: theme.colors.primary,
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

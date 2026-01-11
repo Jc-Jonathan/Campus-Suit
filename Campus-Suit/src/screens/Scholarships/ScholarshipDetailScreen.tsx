@@ -138,7 +138,8 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
             activeOpacity={0.9}
             onPress={() =>
               navigation.navigate('ScholarshipApply', {
-                id: scholarship._id, // 🔑 Mongo _id
+                scholarshipId: scholarship._id,
+                scholarshipTitle: scholarship.title
               })
             }
           >

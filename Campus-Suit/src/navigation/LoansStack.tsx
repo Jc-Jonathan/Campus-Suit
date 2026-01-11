@@ -4,27 +4,31 @@ import { LoanListScreen } from '../screens/Loans/LoanListScreen';
 import { LoanDetailScreen } from '../screens/Loans/LoanDetailScreen';
 import { LoanApplyScreen } from '../screens/Loans/LoanApplyScreen';
 import { LoanStatusScreen } from '../screens/Loans/LoanStatusScreen';
-import { SearchScreen } from '../screens/Common/SearchScreen';
-import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
 
+// In LoansStack.tsx
 export type LoansStackParamList = {
   LoanList: undefined;
-  LoanDetail: { id: string };
+  LoanDetail: { 
+    id: string;
+    product?: {
+      id: string;
+      name: string;
+      rate: number;
+      maxAmount: number;
+      description: string;
+    };
+  };
   LoanApply: { id: string };
-  LoanStatus: undefined;
-  Search: undefined;
-  Notifications: undefined;
+  LoanStatus: { id?: string };
 };
 
 const Stack = createNativeStackNavigator<LoansStackParamList>();
 
 export const LoansStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="LoanList">
     <Stack.Screen name="LoanList" component={LoanListScreen} />
     <Stack.Screen name="LoanDetail" component={LoanDetailScreen} />
     <Stack.Screen name="LoanApply" component={LoanApplyScreen} />
     <Stack.Screen name="LoanStatus" component={LoanStatusScreen} />
-    <Stack.Screen name="Search" component={SearchScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
   </Stack.Navigator>
 );

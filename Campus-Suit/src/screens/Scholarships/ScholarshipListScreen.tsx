@@ -112,6 +112,14 @@ export const ScholarshipListScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       />
+      
+      {/* View Status Button */}
+      <TouchableOpacity 
+        style={styles.viewStatusButton}
+        onPress={() => navigation.navigate('ScholarshipStatus')}
+      >
+        <Text style={styles.viewStatusButtonText}>View Status</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -150,5 +158,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: theme.colors.textMuted,
     fontSize: theme.typography.small,
+  },
+  viewStatusButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: theme.colors.primary,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  viewStatusButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

@@ -41,8 +41,10 @@ const upload = multer({
 
 // GET ALL SCHOLARSHIPS
 router.get('/', async (req, res) => {
+  console.log('GET /api/scholarships - Request received');
   try {
     const scholarships = await Scholarship.find({});
+    console.log(`Found ${scholarships.length} scholarships`);
     res.json({
       success: true,
       data: scholarships
@@ -51,7 +53,8 @@ router.get('/', async (req, res) => {
     console.error('Error fetching scholarships:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -139,25 +142,7 @@ router.post('/add', upload.single('courseFile'), async (req, res) => {
 });
 
 
-// GET ALL
-router.get('/', async (req, res) => {
-  try {
-    console.log('Fetching all scholarships');
-    const scholarships = await Scholarship.find().sort({ createdAt: -1 });
-    res.json({
-      success: true,
-      count: scholarships.length,
-      data: scholarships
-    });
-  } catch (error) {
-    console.error('Error fetching scholarships:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch scholarships',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
+
 
 // UPDATE
 router.put('/:id', upload.single('courseFile'), async (req, res) => {

@@ -163,7 +163,7 @@ export const Scholarship: React.FC = () => {
         <ScrollView>
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>
-              {editingId ? 'Edit Scholarship' : 'Add New Scholarship'}
+              {editingId ? 'Edit Scholarship' : 'Scholarship'}
             </Text>
 
             <TextInput
@@ -230,7 +230,7 @@ export const Scholarship: React.FC = () => {
           </View>
 
           <Text style={[styles.formTitle, { marginTop: 30 }]}>
-            Available Scholarships
+            Scholarships
           </Text>
 
           {scholarships.map(item => (
@@ -275,7 +275,13 @@ export const Scholarship: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { 
+    flex: 1,
+     backgroundColor: '#f5f5f5',
+     marginRight: -25,
+     marginLeft: -19,
+    maxWidth: '155%', 
+  },
   content: { flex: 1, padding: 20 },
   formContainer: {
     backgroundColor: '#fff',

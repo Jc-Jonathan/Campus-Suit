@@ -1,34 +1,36 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppButton } from '../../components/AppButton';
 import { theme } from '../../theme/theme';
+import { AdminStackParamList } from '../../navigation/AdminStack';
 
 export const AdminDashboard: React.FC = () => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
 
   const goToLoans = () => {
-    navigation.navigate('AdminLoans' as never);
+    navigation.navigate('AdminLoans');
   };
 
   const goToOrders = () => {
-    navigation.navigate('AdminOrders' as never);
+    navigation.navigate('AdminOrders');
   };
 
   const goToProducts = () => {
-    navigation.navigate('AdminProducts' as never);
+    navigation.navigate('AdminProducts');
   };
 
   const goToScholarships = () => {
-    navigation.navigate('AdminScholarships' as never);
+    navigation.navigate('AdminScholarships');
   };
 
   const goToUsers = () => {
-    navigation.navigate('AdminUsers' as never);
+    navigation.navigate('AdminUsers');
   };
 
   const goToNotification = () => {
-    navigation.navigate('AdminNotification' as never);
+    navigation.navigate('AdminNotification');
   };
 
   return (

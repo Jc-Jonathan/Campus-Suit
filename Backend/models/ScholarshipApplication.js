@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const ScholarshipApplicationSchema = new mongoose.Schema(
   {
+    applicationId: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+
     // Applicant Information
     fullName: String,
     dob: String,
@@ -21,19 +27,28 @@ const ScholarshipApplicationSchema = new mongoose.Schema(
     gpa: String,
 
     // Scholarship Details
-    scholarshipName: String,
-    appliedBefore: String,
-    reason: String,
-    financialNeed: String,
-
-    // Documents (file paths)
-    documents: {
-      nationalId: String,
-      transcript: String,
-      recommendation: String,
-      enrollmentProof: String,
-      other: String,
+    scholarshipId: {
+      type: String,
+      required: true,
     },
+    scholarshipTitle: {
+      type: String,
+      required: true,
+    },
+
+    // Application status
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+
+    // Document URLs
+    nationalIdUrl: String,
+    transcriptUrl: String,
+    recommendationUrl: String,
+    enrollmentProofUrl: String,
+    otherDocumentUrl: String,
   },
   { timestamps: true }
 );

@@ -8,8 +8,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Scholarship } from './ScholaComp/scholarship';
-import {Admission} from './ScholaComp/Admission';
-import { Applicant } from './ScholaComp/Aplicant';
+import Admission from './ScholaComp/Admission';
+import Applicant from './ScholaComp/Applicant';
 import { Notificationsc as Notifications } from './ScholaComp/Notificationsc';
 
 type ViewType = 'scholarships' | 'admissions' | 'applications' | 'notifications';
@@ -69,10 +69,10 @@ export const AdminScholarships = () => {
         />
       </View>
 
-      {/* RIGHT CONTENT */}
-      <ScrollView style={styles.content}>
+      {/* RIGHT CONTENT - Let the inner component handle scrolling */}
+      <View style={styles.content}>
         {renderRightContent()}
-      </ScrollView>
+      </View>
     </View>
   );
 };
@@ -103,13 +103,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#f5f5f5',
   },
-
   sidebar: {
     width: 140,
     backgroundColor: '#2c3e50',
     paddingTop: 20,
   },
-
+  content: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
   sideBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -117,26 +120,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#34495e',
   },
-
   sideBtnActive: {
     backgroundColor: '#34495e',
   },
-
   sideText: {
     color: '#fff',
     marginLeft: 10,
     fontSize: 16,
   },
-
   sideTextActive: {
     color: '#4CAF50',
     fontWeight: 'bold',
-  },
-
-  content: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
   },
 
   card: {

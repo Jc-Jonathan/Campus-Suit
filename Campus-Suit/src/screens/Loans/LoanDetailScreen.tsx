@@ -1,231 +1,338 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions, NativeScrollEvent, NativeSyntheticEvent, TouchableOpacity, Modal, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  Linking,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
-import { useAppData } from '../../contexts/AppDataContext';
 import { Header, HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 
-export type LoanDetailProps = NativeStackScreenProps<LoansStackParamList, 'LoanDetail'>;
+export type LoanDetailProps = NativeStackScreenProps<
+  LoansStackParamList,
+  'LoanDetail'
+>;
 
 const { width } = Dimensions.get('window');
+
 const HERO_IMAGES = [
   require('../../../assets/images/loan1.jpg'),
   require('../../../assets/images/loan2.jpg'),
 ];
 
-export const LoanDetailScreen: React.FC<LoanDetailProps> = ({ route, navigation }) => {
-  const { loanProducts } = useAppData();
-  const product = loanProducts.find(p => p.id === route.params.id);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const heroScrollRef = useRef<ScrollView | null>(null);
-  const [heroModalVisible, setHeroModalVisible] = useState(false);
+// 🔴 CHANGE TO YOUR SERVER IP
+const API_BASE = 'http://192.168.31.130:5000';
 
+export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
+  route,
+  navigation,
+}) => {
+  const { id } = route.params;
+
+  const [loan, setLoan] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [heroModalVisible, setHeroModalVisible] = useState(false);
+  const heroScrollRef = useRef<ScrollView | null>(null);
+
+  // =======================
+  // FETCH LOAN FROM BACKEND
+  // =======================
+  useEffect(() => {
+    const fetchLoan = async () => {
+      try {
+        setLoading(true);
+
+        const loanId = Number(id);
+        if (isNaN(loanId)) throw new Error('Invalid loan ID');
+
+        const response = await fetch(
+          `${API_BASE}/api/loans/loan/${loanId}`
+        );
+
+        if (!response.ok) throw new Error('Failed to fetch loan details');
+
+        const data = await response.json();
+        setLoan(data);
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Unable to load loan');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLoan();
+  }, [id]);
+
+  // =======================
+  // HERO AUTO SLIDE
+  // =======================
   useEffect(() => {
     const interval = setInterval(() => {
-      const nextIndex = (heroIndex + 1) % HERO_IMAGES.length;
-      if (heroScrollRef.current) {
-        heroScrollRef.current.scrollTo({ x: nextIndex * width, animated: true });
-      }
-      setHeroIndex(nextIndex);
+      const next = (heroIndex + 1) % HERO_IMAGES.length;
+      heroScrollRef.current?.scrollTo({
+        x: next * width,
+        animated: true,
+      });
+      setHeroIndex(next);
     }, 4000);
 
     return () => clearInterval(interval);
   }, [heroIndex]);
 
-  const handleHeroScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offsetX / width);
-    if (newIndex !== heroIndex) {
-      setHeroIndex(newIndex);
+  // =======================
+  // DOWNLOAD DOCUMENT
+  // =======================
+  const downloadDocument = async () => {
+    if (!loan?.documentUrl) {
+      Alert.alert('No document', 'No loan form attached');
+      return;
     }
+
+    const url = `${API_BASE}${loan.documentUrl}`;
+
+    Alert.alert(
+      'Download Loan Form',
+      'Do you want to download this document?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Download',
+          onPress: async () => {
+            const supported = await Linking.canOpenURL(url);
+            if (supported) Linking.openURL(url);
+            else Alert.alert('Error', 'Cannot open document');
+          },
+        },
+      ]
+    );
   };
 
-  const openHeroModal = () => {
-    setHeroModalVisible(true);
-  };
-
-  const closeHeroModal = () => {
-    setHeroModalVisible(false);
-  };
-
-  if (!product) {
+  // =======================
+  // LOADING / ERROR STATES
+  // =======================
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <HeaderTab />
-        <Header title="Loan" />
-        <Text style={styles.muted}>Loan product not found.</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
+  if (!loan) {
+    return (
+      <View style={styles.container}>
+        <HeaderTab />
+        <Header title="Loan" />
+        <Text style={styles.muted}>Loan not found</Text>
+      </View>
+    );
+  }
+
+  // =======================
+  // MAIN UI
+  // =======================
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title={product.name} />
+      <Header title="Loan Details" />
+
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroCarousel}>
-          <ScrollView
-            ref={heroScrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleHeroScrollEnd}
-          >
-            {HERO_IMAGES.map((img, index) => (
-              <TouchableOpacity
-                key={index}
-                activeOpacity={0.9}
-                onPress={openHeroModal}
-                style={[styles.heroCard, { width: width - theme.spacing.lg * 2 }]}
-              >
-                <Image source={img} style={styles.heroImage} resizeMode="cover" />
-                <View style={styles.heroOverlay}>
-                  <Text style={styles.heroText}>Explore your chance to get a loan</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-        <Text style={styles.rate}>{product.rate}% APR</Text>
-        <Text style={styles.meta}>Maximum amount: ${product.maxAmount.toLocaleString()}</Text>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.body}>{product.description}</Text>
+        {/* TITLE */}
+        <Text style={styles.title}>{loan.title}</Text>
 
-        <Text style={styles.sectionTitle}>Loan summary</Text>
-        <Text style={styles.body}>
-          This is a short explanation of how this loan works, including who it is designed for and how it
-          can support your studies.
-        </Text>
-
-        <Text style={styles.sectionTitle}>Loan amount</Text>
-        <Text style={styles.body}>Minimum loan amount: $500</Text>
-        <Text style={styles.body}>
-          Maximum loan amount: ${product.maxAmount.toLocaleString()}
-        </Text>
-
-        <Text style={styles.sectionTitle}>Interest structure</Text>
-        <Text style={styles.body}>Type: Fixed interest, expressed as an annual percentage rate (APR).</Text>
-        <Text style={styles.body}>
-          Example: Interest rate {product.rate}% APR (approximately {(product.rate / 12).toFixed(2)}% per
-          month).
-        </Text>
-
-        <Text style={styles.sectionTitle}>Repayment terms</Text>
-        <Text style={styles.body}>
-          Repayments are made in regular instalments. You can choose a weekly or monthly plan depending on
-          your agreement.
-        </Text>
-        <Text style={styles.body}>Typical repayment duration: 6–24 months, depending on amount borrowed.</Text>
-
-        <Text style={styles.sectionTitle}>Eligibility requirements</Text>
-        <Text style={styles.body}>• Be an enrolled or admitted student.</Text>
-        <Text style={styles.body}>• Provide a valid national ID or passport and proof of enrollment.</Text>
-        <Text style={styles.body}>• Meet the minimum income or guarantor requirements set by the lender.</Text>
-
-        <Text style={styles.sectionTitle}>Disbursement method</Text>
-        <Text style={styles.body}>Approved funds are disbursed directly to your preferred channel:</Text>
-        <Text style={styles.body}>• Bank transfer to your registered bank account; or</Text>
-        <Text style={styles.body}>• Mobile money payout to your verified mobile wallet (where available).</Text>
-        <AppButton
-          label="Apply for this loan"
-          onPress={() => navigation.navigate('LoanApply', { id: product.id })}
-        />
-      </ScrollView>
-      <Modal
-        visible={heroModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeHeroModal}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={closeHeroModal}>
-          <View style={styles.modalContent}>
+        {/* HERO */}
+        <ScrollView
+          ref={heroScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.heroWrapper}
+        >
+          {HERO_IMAGES.map((img, index) => (
             <TouchableOpacity
-              style={styles.modalCloseButton}
-              activeOpacity={0.8}
-              onPress={closeHeroModal}
+              key={index}
+              onPress={() => setHeroModalVisible(true)}
+              style={[styles.heroCard, { width: width - 32 }]}
             >
-              <Ionicons name="close" size={24} color="#fff" />
+              <Image source={img} style={styles.heroImage} />
             </TouchableOpacity>
-            <Image
-              source={HERO_IMAGES[heroIndex]}
-              style={styles.modalImage}
-              resizeMode="contain"
-            />
-          </View>
+          ))}
+        </ScrollView>
+
+        {/* SUMMARY CARD */}
+        <View style={styles.card}>
+          <Text style={styles.rate}>{loan.interestRate}% APR</Text>
+          <Text style={styles.meta}>
+            Amount: ${loan.minAmount.toLocaleString()} – $
+            {loan.maxAmount.toLocaleString()}
+          </Text>
+
+          {loan.applicationDeadline && (
+            <>
+              <Text style={styles.sectionTitle}>Application Deadline</Text>
+              <Text style={styles.body}>{loan.applicationDeadline}</Text>
+            </>
+          )}
+        </View>
+
+        {/* DETAILS CARD */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.body}>{loan.description}</Text>
+
+          <Text style={styles.sectionTitle}>Repayment Period</Text>
+          <Text style={styles.body}>{loan.repaymentPeriod}</Text>
+
+          <Text style={styles.sectionTitle}>Eligibility</Text>
+          <Text style={styles.body}>{loan.eligibility || 'Not specified'}</Text>
+
+          <Text style={styles.sectionTitle}>Benefits</Text>
+          <Text style={styles.body}>{loan.benefits || 'Not specified'}</Text>
+        </View>
+
+        {/* ACTIONS */}
+        <View style={styles.actionBox}>
+          <AppButton
+            label="Download Loan Form"
+            onPress={downloadDocument}
+            variant="outline"
+          />
+
+          <View style={{ height: 12 }} />
+
+          <AppButton
+            label="Apply for this loan"
+            onPress={() =>
+              navigation.navigate('LoanApply', { id: loan.loanId })
+            }
+          />
+        </View>
+      </ScrollView>
+
+      {/* IMAGE MODAL */}
+      <Modal transparent visible={heroModalVisible}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setHeroModalVisible(false)}
+        >
+          <Image
+            source={HERO_IMAGES[heroIndex]}
+            style={styles.modalImage}
+            resizeMode="contain"
+          />
         </Pressable>
       </Modal>
     </View>
   );
 };
 
+// =======================
+// STYLES
+// =======================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
-  heroCarousel: {
-    marginBottom: theme.spacing.lg,
+
+  content: {
+    padding: theme.spacing.lg,
+    paddingBottom: 40,
   },
+
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
+    color: theme.colors.text,
+  },
+
+  heroWrapper: {
+    marginBottom: 16,
+  },
+
   heroCard: {
-    height: 140,
-    borderRadius: theme.radius.lg,
+    height: 180,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginRight: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.card,
+    marginRight: 12,
+    elevation: 4,
   },
+
   heroImage: {
     width: '100%',
     height: '100%',
   },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
+
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
   },
-  heroText: {
-    fontSize: theme.typography.subtitle,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
+
+  rate: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    marginBottom: 6,
   },
-  rate: { fontSize: theme.typography.subtitle, fontWeight: '700', color: theme.colors.primary },
-  meta: { marginTop: 4, color: theme.colors.textMuted },
+
+  meta: {
+    color: theme.colors.textMuted,
+    marginBottom: 12,
+    fontSize: 14,
+  },
+
   sectionTitle: {
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.xs,
-    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+    fontWeight: '700',
     color: theme.colors.text,
   },
-  body: { color: theme.colors.textMuted, lineHeight: 20 },
-  muted: { padding: theme.spacing.lg, color: theme.colors.textMuted },
+
+  body: {
+    color: theme.colors.textMuted,
+    lineHeight: 22,
+    fontSize: 14,
+  },
+
+  actionBox: {
+    marginTop: 8,
+  },
+
+  muted: {
+    padding: 20,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+  },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
+
+  modalImage: {
     width: '90%',
     height: '70%',
+  },
+
+  center: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 4,
-  },
-  modalImage: {
-    width: '100%',
-    height: '100%',
   },
 });

@@ -11,6 +11,10 @@ const scholarshipSchema = new mongoose.Schema({
   amount: Number,
   percentage: Number,
   courseFileUrl: String,
-});
+},
+  {
+    timestamps: true, // ✅ ADD THIS
+  }
+);
 
 module.exports = mongoose.model('Scholarship', scholarshipSchema);

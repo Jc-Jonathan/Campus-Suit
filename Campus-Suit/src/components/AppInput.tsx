@@ -4,6 +4,7 @@ import { theme } from '../theme/theme';
 
 interface Props extends TextInputProps {
   label?: string;
+  required?: boolean;
 }
 
 export const AppInput: React.FC<Props> = ({ label, style, ...rest }) => {

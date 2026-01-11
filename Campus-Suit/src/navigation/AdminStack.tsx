@@ -7,6 +7,12 @@ import { AdminProducts } from '../screens/Admin/AdminProducts';
 import { AdminOrders } from '../screens/Admin/AdminOrders';
 import { AdminUsers } from '../screens/Admin/AdminUsers';
 import { AdminNotification } from '../screens/Admin/AdminNotification';
+import ApplicantDetail from '../screens/Admin/ScholaComp/ApplicantDetail';
+import { Loan } from '../screens/Admin/LoanComp/Loan';
+import { LoanApplicant } from '../screens/Admin/LoanComp/LoanApplicant';
+import { LoanApplicantDetail } from '../screens/Admin/LoanComp/LoanApplicantDEtail';
+import { LoanState } from '../screens/Admin/LoanComp/LoanState';
+import { LoanNotification } from '../screens/Admin/LoanComp/LoanNotification';
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
@@ -16,6 +22,13 @@ export type AdminStackParamList = {
   AdminOrders: undefined;
   AdminUsers: undefined;
   AdminNotification: undefined;
+  ApplicantDetail: { id: string };
+  // Admin Loan Management
+  AdminLoan: undefined;
+  LoanApplicant: { id: string };
+  LoanApplicantDetail: { application: any };
+  LoanState: { id: string };
+  LoanNotification: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -29,5 +42,17 @@ export const AdminStack = () => (
     <Stack.Screen name="AdminOrders" component={AdminOrders} />
     <Stack.Screen name="AdminUsers" component={AdminUsers} />
     <Stack.Screen name="AdminNotification" component={AdminNotification} />
+    <Stack.Screen name="ApplicantDetail" component={ApplicantDetail} />
+    
+    {/* Admin Loan Management */}
+    <Stack.Screen name="AdminLoan" component={Loan} />
+    <Stack.Screen name="LoanApplicant" component={LoanApplicant} />
+    <Stack.Screen 
+      name="LoanApplicantDetail" 
+      component={LoanApplicantDetail} 
+      options={{ title: 'Application Details' }}
+    />
+    <Stack.Screen name="LoanState" component={LoanState} />
+    <Stack.Screen name="LoanNotification" component={LoanNotification} />
   </Stack.Navigator>
 );

@@ -14,7 +14,34 @@ export type ScholarshipApplyProps = NativeStackScreenProps<
   'ScholarshipApply'
 >;
 
-export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ navigation }) => {
+export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ navigation, route }) => {
+  const { scholarshipId } = route.params;
+  const [scholarshipTitle, setScholarshipTitle] = useState('');
+  const [loadingScholarship, setLoadingScholarship] = useState(true);
+
+  useEffect(() => {
+    const fetchScholarship = async () => {
+      try {
+        const res = await fetch(
+          `http://192.168.31.130:5000/api/scholarships/${scholarshipId}` 
+        );
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+          throw new Error('Failed to load scholarship');
+        }
+
+        setScholarshipTitle(json.data.title);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load scholarship details');
+        navigation.goBack();
+      } finally {
+        setLoadingScholarship(false);
+      }
+    };
+
+    fetchScholarship();
+  }, [scholarshipId, navigation]);
   // Applicant information
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
@@ -26,6 +53,7 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [gender, setGender] = useState('');
   const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [address, setAddress] = useState('');
 
   // Academic information
@@ -39,12 +67,47 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const [gpa, setGpa] = useState('');
 
   // Scholarship details
-  const [scholarshipName, setScholarshipName] = useState('');
+  const [scholarshipName, setScholarshipName] = useState(scholarshipTitle);
   const [appliedBefore, setAppliedBefore] = useState('');
   const [reason, setReason] = useState('');
   const [financialNeed, setFinancialNeed] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  
+  const validateEmail = (email: string) => {
+    // More comprehensive email validation
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+\.[^\s@]+$|^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+  
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (emailTouched) {
+      if (!text) {
+        setEmailError('Email is required');
+      } else if (!validateEmail(text)) {
+        setEmailError('Please enter a valid email address (e.g., example@domain.com)');
+      } else {
+        setEmailError('');
+      }
+    }
+  };
+  
+  const handleEmailBlur = () => {
+    setEmailTouched(true);
+    if (!email) {
+      const errorMsg = 'Email is required';
+      setEmailError(errorMsg);
+      Alert.alert('Validation Error', errorMsg);
+    } else if (!validateEmail(email)) {
+      const errorMsg = 'Please enter a valid email address (e.g., example@domain.com)';
+      setEmailError(errorMsg);
+      Alert.alert('Invalid Email', errorMsg);
+    } else {
+      setEmailError('');
+    }
+  };
 
   interface PickedFile {
   uri: string;
@@ -70,74 +133,84 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const handleSubmit = async () => {
     if (loading) return;
     
-    setLoading(true);
+    // Validate all required fields including email
+    setEmailTouched(true);
+    if (!email) {
+      const errorMsg = 'Email is required';
+      setEmailError(errorMsg);
+      Alert.alert('Validation Error', errorMsg);
+      return;
+    } else if (!validateEmail(email)) {
+      const errorMsg = 'Please enter a valid email address (e.g., example@domain.com)';
+      setEmailError(errorMsg);
+      Alert.alert('Invalid Email', errorMsg);
+      return;
+    }
     
+    setLoading(true);
+
     try {
       const formData = new FormData();
 
-      // Add text fields
-      const applicationData = {
-        fullName,
-        dob,
-        country,
-        countryCode,
-        phoneLocal,
-        gender,
-        email,
-        address,
-        studentId,
-        institution,
-        program,
-        yearOfStudy,
-        expectedGraduation,
-        gpa,
-        scholarshipName,
-        appliedBefore,
-        reason,
-        financialNeed,
-      };
-
       // Append text fields
-      Object.entries(applicationData).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
+      formData.append('fullName', fullName);
+      if (dobDate) formData.append('dob', dobDate.toISOString().split('T')[0]);
+      formData.append('gender', gender);
+      formData.append('email', email);
+      formData.append('country', country);
+      formData.append('countryCode', countryCode);
+      formData.append('phoneLocal', phoneLocal);
+      formData.append('address', address);
+      formData.append('studentId', studentId);
+      formData.append('institution', institution);
+      formData.append('program', program);
+      formData.append('yearOfStudy', yearOfStudy);
+      formData.append('gpa', gpa);
+      formData.append('scholarshipName', scholarshipName);
+      formData.append('appliedBefore', appliedBefore);
+      formData.append('reason', reason);
+      formData.append('financialNeed', financialNeed);
+      formData.append('scholarshipId', scholarshipId);
+      formData.append('scholarshipTitle', scholarshipTitle);
 
-      // Append files if they exist using the FormData from the document
+      // Append files if they exist
       if (documents.nationalId) {
-        // Get the file from the FormData and append it directly
-        const file = documents.nationalId.data.get('file');
-        if (file) {
-          formData.append('nationalId', file);
-        }
+        formData.append('nationalId', {
+          uri: documents.nationalId.uri,
+          type: documents.nationalId.type || 'application/octet-stream',
+          name: documents.nationalId.name || 'nationalId.jpg'
+        } as any);
       }
 
       if (documents.transcript) {
-        const file = documents.transcript.data.get('file');
-        if (file) {
-          formData.append('transcript', file);
-        }
+        formData.append('transcript', {
+          uri: documents.transcript.uri,
+          type: documents.transcript.type || 'application/pdf',
+          name: documents.transcript.name || 'transcript.pdf'
+        } as any);
       }
 
       if (documents.recommendation) {
-        const file = documents.recommendation.data.get('file');
-        if (file) {
-          formData.append('recommendation', file);
-        }
+        formData.append('recommendation', {
+          uri: documents.recommendation.uri,
+          type: documents.recommendation.type || 'application/pdf',
+          name: documents.recommendation.name || 'recommendation.pdf'
+        } as any);
       }
 
       if (documents.enrollmentProof) {
         formData.append('enrollmentProof', {
           uri: documents.enrollmentProof.uri,
-          name: documents.enrollmentProof.name,
-          type: documents.enrollmentProof.type || 'application/octet-stream',
+          type: documents.enrollmentProof.type || 'application/pdf',
+          name: documents.enrollmentProof.name || 'enrollmentProof.pdf'
         } as any);
       }
 
       if (documents.other) {
         formData.append('other', {
           uri: documents.other.uri,
-          name: documents.other.name,
           type: documents.other.type || 'application/octet-stream',
+          name: documents.other.name || 'other_document.pdf'
         } as any);
       }
 
@@ -165,7 +238,6 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
     }
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Application submitted', 'This is a mocked submission.');
       navigation.navigate('ScholarshipStatus');
     }, 800);
   };
@@ -254,6 +326,11 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
       <HeaderTab />
       <Header title="Apply" subtitle="Scholarship application" />
       <ScrollView contentContainerStyle={styles.content}>
+        {!loadingScholarship && (
+          <Text style={styles.applyTitle}>
+            Applying for: {scholarshipTitle}
+          </Text>
+        )}
         {/* Applicant Information */}
         <Text style={styles.sectionTitle}>Applicant Information</Text>
         <AppInput label="Full name" value={fullName} onChangeText={setFullName} />
@@ -278,12 +355,19 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
           </Text>
         </TouchableOpacity>
         <AppInput label="Gender" value={gender} onChangeText={setGender} />
-        <AppInput
-          label="Email address"
-          value={email}
-          keyboardType="email-address"
-          onChangeText={setEmail}
-        />
+        <View style={styles.inputContainer}>
+          <AppInput
+            label="Email address"
+            value={email}
+            keyboardType="email-address"
+            placeholder='Enter your email'
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={handleEmailChange}
+            onBlur={handleEmailBlur}
+          />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        </View>
         <Text style={styles.fieldLabel}>Phone number</Text>
         <View style={styles.phoneRow}>
           <View style={styles.phonePrefix}>
@@ -446,6 +530,21 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
+  inputContainer: {
+    marginBottom: theme.spacing.sm,
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 12,
+  },
+  applyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
   sectionTitle: {
     marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
@@ -526,3 +625,5 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
 });
+
+export default ScholarshipApplyScreen;

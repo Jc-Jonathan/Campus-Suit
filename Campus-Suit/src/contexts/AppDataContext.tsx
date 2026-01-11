@@ -1,8 +1,4 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import scholarshipsData from '../mock/scholarships.json';
-import scholarshipApplicationsData from '../mock/scholarshipApplications.json';
-import loanProductsData from '../mock/loanProducts.json';
-import loanApplicationsData from '../mock/loanApplications.json';
 import productsData from '../mock/products.json';
 import ordersData from '../mock/orders.json';
 import usersData from '../mock/users.json';
@@ -29,6 +25,15 @@ export interface ScholarshipApplication {
   submittedAt: string;
 }
 
+export interface LoanApplication {
+  id: string;
+  loanProductId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  amount: number;
+  submittedAt: string;
+  // Add other loan application properties as needed
+}
+
 export interface LoanProduct {
   id: string;
   name: string;
@@ -37,12 +42,6 @@ export interface LoanProduct {
   description: string;
 }
 
-export interface LoanApplication {
-  id: string;
-  loanProductId: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-}
 
 export interface Product {
   id: string;
@@ -67,13 +66,11 @@ export interface UserRow {
 
 interface AppDataContextValue {
   isLoading: boolean;
-  scholarships: Scholarship[];
-  scholarshipApplications: ScholarshipApplication[];
-  loanProducts: LoanProduct[];
-  loanApplications: LoanApplication[];
   products: Product[];
   orders: Order[];
   users: UserRow[];
+  loanApplications: LoanApplication[];
+  loanProducts: LoanProduct[];
 }
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined);
@@ -81,26 +78,32 @@ const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<Omit<AppDataContextValue, 'isLoading'>>({
-    scholarships: [],
-    scholarshipApplications: [],
-    loanProducts: [],
-    loanApplications: [],
     products: [],
     orders: [],
     users: [],
+    loanApplications: [],
+    loanProducts: [],
   });
 
   useEffect(() => {
     // simulate loading from API
     const timeout = setTimeout(() => {
+      // Initialize with mock data or fetch from your API
       setState({
-        scholarships: scholarshipsData as unknown as Scholarship[],
-        scholarshipApplications: scholarshipApplicationsData as unknown as ScholarshipApplication[],
-        loanProducts: loanProductsData as unknown as LoanProduct[],
-        loanApplications: loanApplicationsData as unknown as LoanApplication[],
         products: productsData as unknown as Product[],
         orders: ordersData as unknown as Order[],
         users: usersData as unknown as UserRow[],
+        loanApplications: [], // Initialize with empty array or fetch from API
+        loanProducts: [
+          {
+            id: '1',
+            name: 'Student Loan',
+            rate: 5.5,
+            maxAmount: 50000,
+            description: 'Loan for educational expenses'
+          },
+          // Add more loan products as needed
+        ],
       });
       setIsLoading(false);
     }, 800);

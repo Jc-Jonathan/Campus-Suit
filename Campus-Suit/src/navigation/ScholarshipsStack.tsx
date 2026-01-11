@@ -6,14 +6,23 @@ import { ScholarshipApplyScreen } from '../screens/Scholarships/ScholarshipApply
 import { ScholarshipStatusScreen } from '../screens/Scholarships/ScholarshipStatusScreen';
 import { SearchScreen } from '../screens/Common/SearchScreen';
 import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
+import Applicant from '../screens/Admin/ScholaComp/Applicant';
+import ApplicantDetail from '../screens/Admin/ScholaComp/ApplicantDetail';
+import Admission from '../screens/Admin/ScholaComp/Admission';
 
 export type ScholarshipsStackParamList = {
   ScholarshipList: undefined;
   ScholarshipDetail: { id: string };
-  ScholarshipApply: { id: string };
+  ScholarshipApply: { 
+    scholarshipId: string;
+    scholarshipTitle?: string;
+  };
   ScholarshipStatus: undefined;
   Search: undefined;
   Notifications: undefined;
+  Applicants: undefined;
+  ApplicantDetail: undefined;
+  Admission: undefined;
 };
 
 const Stack = createNativeStackNavigator<ScholarshipsStackParamList>();
@@ -26,5 +35,20 @@ export const ScholarshipsStack = () => (
     <Stack.Screen name="ScholarshipStatus" component={ScholarshipStatusScreen} />
     <Stack.Screen name="Search" component={SearchScreen} />
     <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen 
+      name="Applicants" 
+      component={Applicant} 
+      options={{ title: 'Applicants' }}
+    />
+    <Stack.Screen 
+      name="ApplicantDetail" 
+      component={ApplicantDetail} 
+      options={{ title: 'Applicant Details' }}
+    />
+    <Stack.Screen 
+      name="Admission" 
+      component={Admission} 
+      options={{ title: 'Admission' }}
+    />
   </Stack.Navigator>
 );

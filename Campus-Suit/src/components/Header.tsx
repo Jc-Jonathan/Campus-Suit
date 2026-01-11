@@ -9,14 +9,24 @@ interface Props {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
+  showBackButton?: boolean;
 }
 
-export const Header: React.FC<Props> = ({ title, subtitle, right }) => {
+export const Header: React.FC<Props> = ({ title, subtitle, right, showBackButton = false }) => {
+  const navigation = useNavigation();
+  
   return (
     <View style={styles.container}>
-      <View>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {showBackButton && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 10 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        )}
+        <View>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        </View>
       </View>
       <View style={styles.right}>
         {right}
