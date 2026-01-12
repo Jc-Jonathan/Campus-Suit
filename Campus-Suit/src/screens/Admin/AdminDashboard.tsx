@@ -44,7 +44,7 @@ export const AdminDashboard: React.FC = () => {
             <AppButton label="Loan" onPress={goToLoans} />
           </View>
           <View style={styles.cell}>
-            <AppButton label="Orders" onPress={goToOrders} />
+            <AppButton label="Add Banners" onPress={goToOrders} />
           </View>
         </View>
         <View style={styles.row}>

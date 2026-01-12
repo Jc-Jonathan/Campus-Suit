@@ -1,67 +1,39 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type UserRole = 'student' | 'admin';
+const AuthContext = createContext<any>(null);
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  role: UserRole;
-}
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  isLoading: boolean;
-  loginAsStudent: () => void;
-  loginAsAdmin: () => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export const AuthProvider = ({ children }: any) => {
+  const [user, setUser] = useState<{ userId: number } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // simulate restoring auth state
-    setIsLoading(true);
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timeout);
+    AsyncStorage.getItem('userId').then((id) => {
+      if (id) setUser({ userId: Number(id) });
+      setLoading(false);
+    });
   }, []);
 
-  const loginAsStudent = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setUser({ id: '1', name: 'Student User', role: 'student' });
-      setIsLoading(false);
-    }, 600);
-  };
+  const loginAsStudent = async (userId: number) => {
+  if (!userId) {
+    throw new Error('Invalid userId');
+  }
 
-  const loginAsAdmin = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setUser({ id: '2', name: 'Admin User', role: 'admin' });
-      setIsLoading(false);
-    }, 600);
-  };
+  await AsyncStorage.setItem('userId', userId.toString());
+  setUser({ userId });
+};
 
-  const logout = () => {
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('userId');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginAsStudent, loginAsAdmin, logout }}>
+    <AuthContext.Provider value={{ user, loginAsStudent, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextValue => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return ctx;
-};
+export const useAuth = () => useContext(AuthContext);

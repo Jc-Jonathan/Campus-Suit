@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface ApiResponse {
   message?: string;
+  userId?: number;
+  role?: string;
 }
 
 export const SignInScreen = () => {
@@ -47,7 +49,7 @@ export const SignInScreen = () => {
       Alert.alert('Error', 'Password must be at least 4 characters');
       return;
     }
-
+     
     setUserLoading(true);
 
     try {
@@ -68,20 +70,27 @@ export const SignInScreen = () => {
       }
 
       if (!response.ok) {
-        Alert.alert('Login Failed', data.message || 'Login failed');
-        setPassword('');
-        return;
-      }
+  Alert.alert('Login Failed', data.message || 'Login failed');
+  setPassword('');
+  return;
+}
 
-      loginAsStudent();
-      setPassword('');
+if (!data.userId) {
+  Alert.alert('Error', 'User ID not returned from server');
+  return;
+}
 
-      Alert.alert('Success', 'You successfully signed in', [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Home'),
-        },
-      ]);
+await loginAsStudent(data.userId);
+setPassword('');
+
+Alert.alert('Success', 'You successfully signed in', [
+  {
+    text: 'OK',
+    onPress: () => navigation.navigate('ProfileHome'),
+  },
+]);
+
+
     } catch {
       Alert.alert('Error', 'Server not reachable');
       setPassword('');
@@ -89,7 +98,7 @@ export const SignInScreen = () => {
       setUserLoading(false);
     }
   };
-
+  
   // 🔹 ADMIN LOGIN
   const handleSignInAsAdmin = async () => {
     if (!email) {
@@ -131,24 +140,39 @@ export const SignInScreen = () => {
         data = { message: 'Invalid server response' };
       }
 
-      if (!response.ok) {
-        Alert.alert('Access Denied', data.message || 'Admin login failed');
-        setPassword('');
+      if (!data.userId) {
+        Alert.alert('Login Error', data.message || 'User ID not returned from server');
         return;
       }
 
-      loginAsAdmin();
-      setPassword('');
+     await loginAsStudent(data.userId);
 
-      Alert.alert('Success', 'Admin signed in successfully', [
-        {
-          text: 'OK',
-          onPress: () =>
-            navigation.navigate('Admin' as never, {
-              screen: 'AdminDashboard',
-            } as never),
-        },
-      ]);
+      if (!response.ok) {
+  Alert.alert('Access Denied', data.message || 'Admin login failed');
+  setPassword('');
+  return;
+}
+
+if (!data.userId) {
+  Alert.alert('Login Error', 'User ID not returned from server');
+  return;
+}
+
+await loginAsStudent(data.userId);
+loginAsAdmin();
+
+setPassword('');
+
+Alert.alert('Success', 'Admin signed in successfully', [
+  {
+    text: 'OK',
+    onPress: () =>
+      navigation.navigate('Admin' as never, {
+        screen: 'AdminDashboard',
+      } as never),
+  },
+]);
+
     } catch {
       Alert.alert('Error', 'Server not reachable');
       setPassword('');
@@ -178,14 +202,15 @@ export const SignInScreen = () => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
+          rightIcon={showPassword ? 'eye-outline' : 'eye-off-outline'}
+          onRightIconPress={() => setShowPassword(!showPassword)}
         />
 
         <TouchableOpacity
-          onPress={() => setShowPassword(!showPassword)}
+          style={styles.forgotPasswordLink}
+          onPress={() => navigation.navigate('PasswordUpdate')}
         >
-          <Text style={styles.showPassword}>
-            {showPassword ? 'Hide Password' : 'Show Password'}
-          </Text>
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <View style={styles.buttonsRow}>
@@ -236,5 +261,16 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     textAlign: 'right',
     marginTop: 4,
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+    padding: 8,
+    marginRight: 4,
+  },
+  forgotPasswordText: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

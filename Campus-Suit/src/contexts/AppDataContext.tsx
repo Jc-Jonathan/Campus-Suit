@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import productsData from '../mock/products.json';
 import ordersData from '../mock/orders.json';
-import usersData from '../mock/users.json';
 
 export interface Scholarship {
   _id?: string;
@@ -58,18 +57,11 @@ export interface Order {
   createdAt: string;
 }
 
-export interface UserRow {
-  id: string;
-  name: string;
-  role: 'student' | 'admin';
-}
-
 interface AppDataContextValue {
   isLoading: boolean;
   products: Product[];
   orders: Order[];
-  users: UserRow[];
-  loanApplications: LoanApplication[];
+loanApplications: LoanApplication[];
   loanProducts: LoanProduct[];
 }
 
@@ -80,8 +72,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<Omit<AppDataContextValue, 'isLoading'>>({
     products: [],
     orders: [],
-    users: [],
-    loanApplications: [],
+loanApplications: [],
     loanProducts: [],
   });
 
@@ -92,8 +83,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       setState({
         products: productsData as unknown as Product[],
         orders: ordersData as unknown as Order[],
-        users: usersData as unknown as UserRow[],
-        loanApplications: [], // Initialize with empty array or fetch from API
+loanApplications: [], // Initialize with empty array or fetch from API
         loanProducts: [
           {
             id: '1',
