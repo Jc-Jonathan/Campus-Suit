@@ -1,28 +1,50 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StoreStackParamList } from '../../navigation/StoreStack';
-import { useAppData } from '../../contexts/AppDataContext';
 import { HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
 import { theme } from '../../theme/theme';
 
-export type ProductDetailProps = NativeStackScreenProps<
+type Props = NativeStackScreenProps<
   StoreStackParamList,
   'ProductDetail'
 >;
 
-export const ProductDetailScreen: React.FC<ProductDetailProps> = ({ route, navigation }) => {
-  const { products } = useAppData();
-  const product = products.find(p => p.id === route.params.id);
+interface Product {
+  productId: number;
+  name: string;
+  description: string;
+  imageUrl: string;
+  newPrice: number;
+  oldPrice?: number;
+}
+
+export const ProductDetailScreen: React.FC<Props> = ({ route }) => {
+  const { id } = route.params;
+  const [product, setProduct] = useState<Product | null>(null);
+
+  const API_URL = 'http://192.168.31.130:5000/api/products';
+
+  useEffect(() => {
+    fetch(API_URL)
+      .then(res => res.json())
+      .then((data: Product[]) =>
+        setProduct(data.find(p => p.productId === Number(id)) || null)
+      );
+  }, [id]);
 
   if (!product) {
     return (
       <View style={styles.container}>
         <HeaderTab />
-        <View style={styles.content}>
-          <Text style={styles.muted}>Product not found.</Text>
-        </View>
+        <Text style={styles.muted}>Product not found</Text>
       </View>
     );
   }
@@ -30,68 +52,104 @@ export const ProductDetailScreen: React.FC<ProductDetailProps> = ({ route, navig
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <View style={styles.hero}>
-        {product.image && (
+
+      <ScrollView>
+        {/* IMAGE */}
+        <View style={styles.hero}>
           <Image
-            source={{ uri: product.image }}
+            source={{ uri: product.imageUrl }}
             style={styles.heroImage}
-            resizeMode="contain"
           />
-        )}
-      </View>
-      <View style={styles.detailCard}>
-        <Text style={styles.name}>{product.name}</Text>
-        {product.tags && product.tags.length > 0 && (
-          <Text style={styles.meta}>{product.tags.join(' • ')}</Text>
-        )}
-        <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-        <AppButton
-          label="Buy now"
-          onPress={() => navigation.navigate('Cart')}
-        />
-      </View>
+        </View>
+
+        {/* DETAILS */}
+        <View style={styles.card}>
+          <Text style={styles.name}>{product.name}</Text>
+
+          <Text style={styles.description}>
+            {product.description}
+          </Text>
+
+          {/* PRICE ROW */}
+          <View style={styles.priceRow}>
+            {product.oldPrice && (
+              <Text style={styles.oldPrice}>
+                ₹{product.oldPrice}
+              </Text>
+            )}
+            <Text style={styles.newPrice}>
+              ₹{product.newPrice}
+            </Text>
+          </View>
+
+          {/* BUTTONS */}
+          <View style={styles.actions}>
+            <AppButton label="Add to Cart" onPress={() => {}} />
+            <AppButton label="Order Now" onPress={() => {}} />
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
   hero: {
-    flex: 1.2,
-    backgroundColor: theme.colors.surface,
+    height: 280,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   heroImage: {
-    width: '80%',
-    height: '80%',
+    width: '85%',
+    height: '85%',
+    resizeMode: 'contain',
   },
-  detailCard: {
-    flex: 1,
+
+  card: {
     padding: theme.spacing.lg,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
     backgroundColor: theme.colors.background,
-    marginTop: -theme.spacing.lg,
   },
+
   name: {
     fontSize: theme.typography.subtitle,
     fontWeight: '600',
-    color: theme.colors.text,
+    marginBottom: 8,
   },
-  meta: {
-    marginTop: 4,
+
+  description: {
+    fontSize: theme.typography.body,
     color: theme.colors.textMuted,
-  },
-  price: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.title,
-    fontWeight: '700',
-    color: theme.colors.primary,
     marginBottom: theme.spacing.lg,
   },
+
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+
+  newPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+
+  oldPrice: {
+    fontSize: 16,
+    color: 'red',
+    textDecorationLine: 'line-through',
+  },
+
+  actions: {
+    gap: theme.spacing.sm,
+  },
+
   muted: {
+    padding: 20,
     color: theme.colors.textMuted,
   },
 });

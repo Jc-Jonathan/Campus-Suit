@@ -1,3 +1,4 @@
+// Update MainTabs.tsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,7 @@ import { StoreStack } from '../navigation/StoreStack';
 import { ProfileStack } from '../navigation/ProfileStack';
 import { HomeScreen } from '../screens/Home/HomeScreen';
 import { theme } from '../theme/theme';
+import { Platform } from 'react-native';
 
 export type MainTabsParamList = {
   Home: undefined;
@@ -30,7 +32,12 @@ export const MainTabs = () => {
           elevation: 8,
           backgroundColor: theme.colors.surface,
           paddingHorizontal: 0,
+          position: 'relative',
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
+        tabBarHideOnKeyboard: true,
         tabBarItemStyle: {
           flex: 1,
         },

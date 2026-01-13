@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProfileScreen } from '../screens/Profile/ProfileScreen';
 import { SearchScreen } from '../screens/Common/SearchScreen';
 import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
-import { SettingsScreen } from '../screens/Profile/SettingsScreen';
 import { SignInScreen } from '../screens/Auth/SignInScreen';
 import { SignUpScreen } from '../screens/Auth/SignUpScreen';
 import { PasswordUpdateScreen } from '../screens/Auth/PasswordUpdate';
@@ -13,7 +12,6 @@ export type ProfileStackParamList = {
   ProfileHome: undefined;
   Search: undefined;
   Notifications: undefined;
-  Settings: undefined;
   SignIn: undefined;
   SignUp: undefined;
   PasswordUpdate: undefined;
@@ -22,7 +20,14 @@ export type ProfileStackParamList = {
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export const ProfileStack = () => {
-  const { user } = useAuth();
+  const auth = useAuth();
+  
+  // Handle the case when auth is null (context not provided)
+  if (auth === null) {
+    return null; // or return a loading spinner/placeholder
+  }
+
+  const { user } = auth;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -32,7 +37,6 @@ export const ProfileStack = () => {
           <Stack.Screen name="ProfileHome" component={ProfileScreen} />
           <Stack.Screen name="Search" component={SearchScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="PasswordUpdate" component={PasswordUpdateScreen} />
@@ -45,7 +49,6 @@ export const ProfileStack = () => {
           <Stack.Screen name="ProfileHome" component={ProfileScreen} />
           <Stack.Screen name="Search" component={SearchScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="PasswordUpdate" component={PasswordUpdateScreen} />
         </>
       )}

@@ -7,13 +7,10 @@ import {
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  KeyboardAvoidingView,
   Image,
   SafeAreaView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  TouchableWithoutFeedback
+  StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppButton } from '../../components/AppButton';
@@ -89,21 +86,10 @@ export const ProfileScreen = ({ navigation }: any) => {
       <StatusBar barStyle="light-content" />
       <HeaderTab />
       
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView 
-            style={styles.container} 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 30 }}
-            keyboardShouldPersistTaps="handled"
-          >
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <LinearGradient
-          colors={[theme.colors.primary, '#212ebaff']}
+          colors={[theme.colors.primary, '#bec2f6ff']}
           style={styles.profileHeader}
         >
           <View style={styles.avatarContainer}>
@@ -157,20 +143,15 @@ export const ProfileScreen = ({ navigation }: any) => {
           </View>
 
           {/* Logout Button */}
-          <View style={styles.logoutButtonContainer}>
-            <TouchableOpacity 
-              style={styles.logoutButton}
-              onPress={handleLogout}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="logout" size={20} color="#fff" style={styles.logoutIcon} />
-              <Text style={styles.logoutText}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <MaterialIcons name="logout" size={24} color="#ff3b30" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
         </View>
-          </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -182,7 +163,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingBottom: 30, // Add some padding at the bottom to ensure content isn't hidden behind the tab bar
   },
   profileHeader: {
     padding: 20,
@@ -259,34 +239,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     marginVertical: 5,
   },
-  logoutButtonContainer: {
-    marginTop: 24,
-    borderRadius: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
     borderRadius: 10,
+    padding: 15,
+    marginTop: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  logoutIcon: {
-    marginRight: 10,
+    borderColor: '#ffebee',
   },
   logoutText: {
-    color: '#fff',
+    color: '#ff3b30',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    marginLeft: 10,
   },
   loadingContainer: {
     flex: 1,

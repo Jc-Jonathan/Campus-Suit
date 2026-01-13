@@ -28,11 +28,33 @@ export const AdminUsers: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_URL}/users`);
-      const data = await res.json();
-      setUsers(data);
-    } catch {
-      Alert.alert('Error', 'Failed to fetch users');
+      setLoading(true);
+      const response = await fetch(`${API_URL}/users`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected an array of users');
+      }
+      
+      // Transform data to match the User type
+      const formattedUsers = data.map(user => ({
+        userId: user.userId,
+        name: user.name || 'N/A',
+        email: user.email || 'N/A',
+        country: user.country || 'N/A',
+        phoneCode: user.phoneCode || '+1',
+        phoneNumber: user.phoneNumber || 'N/A'
+      }));
+      
+      setUsers(formattedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      Alert.alert('Error', 'Failed to fetch users. Please try again later.');
     } finally {
       setLoading(false);
     }

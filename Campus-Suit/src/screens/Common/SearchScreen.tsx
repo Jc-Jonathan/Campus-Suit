@@ -6,7 +6,7 @@ export const SearchScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Search</Text>
-      <Text style={styles.subtitle}>Implement search functionality here.</Text>
+      <Text style={styles.subtitle}>Oops there are no search Implemented yet</Text>
     </View>
   );
 };

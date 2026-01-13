@@ -1,10 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const AuthContext = createContext<any>(null);
+interface User {
+  userId?: number;
+  email?: string;
+  isAdmin?: boolean;
+  role?: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  loginAsStudent: (userId: number) => Promise<void>;
+  loginAsAdmin: (email: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: any) => {
-  const [user, setUser] = useState<{ userId: number } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,13 +30,21 @@ export const AuthProvider = ({ children }: any) => {
   }, []);
 
   const loginAsStudent = async (userId: number) => {
-  if (!userId) {
-    throw new Error('Invalid userId');
-  }
+    if (!userId) {
+      throw new Error('Invalid userId');
+    }
+    await AsyncStorage.setItem('userId', userId.toString());
+    setUser({ userId, isAdmin: false, role: 'student' });
+  };
 
-  await AsyncStorage.setItem('userId', userId.toString());
-  setUser({ userId });
-};
+  const loginAsAdmin = async (email: string) => {
+    if (!email) {
+      throw new Error('Email is required');
+    }
+    // Store admin email and set admin flag
+    await AsyncStorage.setItem('adminEmail', email);
+    setUser({ email, isAdmin: true, role: 'admin' });
+  };
 
 
   const logout = async () => {
@@ -30,7 +53,7 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loginAsStudent, logout, loading }}>
+    <AuthContext.Provider value={{ user, loginAsStudent, loginAsAdmin, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

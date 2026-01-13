@@ -91,4 +91,15 @@ router.get('/me/:userId', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+// Get all users (admin only)
+router.get('/users', async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0, resetPasswordToken: 0, resetPasswordExpires: 0, __v: 0 });
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+
 module.exports = router;

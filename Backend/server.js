@@ -46,6 +46,7 @@ app.use('/api/scholarships', require('./routes/scholarships'));
 app.use('/api/scholarshipApplications', require('./routes/scholarshipApplications'));
 app.use('/api/loans', require('./routes/Loans'));
 app.use('/api/loanApplys', require('./routes/LoanApplys'));
+app.use('/api/products', require('./routes/Products'));
 
 /* 🔹 Serve uploaded files */
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
