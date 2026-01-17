@@ -5,6 +5,12 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sendEmail = require('../utils/sendEmail');
+const bodyParser = require('body-parser');
+
+// Parse application/x-www-form-urlencoded
+router.use(bodyParser.urlencoded({ extended: true }));
+// Parse application/json
+router.use(bodyParser.json());
 
 /* ================= MULTER CONFIG ================= */
 
@@ -45,23 +51,59 @@ const uploadFiles = upload.fields([
 
 router.post('/', uploadFiles, async (req, res) => {
   try {
-    const {
+    console.log('Raw request body:', req.body);
+    console.log('Request files:', req.files);
+
+    // For FormData, the fields might be in req.body directly
+    const formData = req.body;
+    
+    // Extract all fields with proper fallbacks
+    const fullName = formData.fullName || '';
+    const dob = formData.dob || '';
+    const gender = formData.gender || '';
+    const phone = formData.phone || '';
+    const email = formData.email || '';
+    const studentId = formData.studentId || '';
+    const homeAddress = formData.homeAddress || '';
+    const program = formData.program || '';
+    const yearOfStudy = formData.yearOfStudy || '';
+    const loanTitle = formData.loanTitle || '';
+    const amount = formData.amount || 0;
+    const purpose = formData.purpose || '';
+    const signature = formData.signature || '';
+    // Convert various truthy values to boolean
+    const toBoolean = (value) => {
+      if (value === undefined || value === null) return false;
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true' || value === '1' || value === 'on';
+      }
+      return Boolean(value);
+    };
+
+    const confirmAccurate = toBoolean(formData.confirmAccurate);
+    const agreeTerms = toBoolean(formData.agreeTerms);
+    const understandRisk = toBoolean(formData.understandRisk);
+
+    console.log('Processed form data:', {
       fullName,
       dob,
       gender,
       phone,
       email,
       studentId,
+      homeAddress,
       program,
       yearOfStudy,
       loanTitle,
       amount,
       purpose,
-      signature,
+      signature: signature ? '[SIGNATURE PRESENT]' : 'Not provided',
       confirmAccurate,
       agreeTerms,
       understandRisk
-    } = req.body;
+    });
+
 
     // ✅ CORRECT FILE URL MAPPING
     let idDocumentUrl = null;
@@ -87,12 +129,14 @@ router.post('/', uploadFiles, async (req, res) => {
       phone,
       email,
       studentId: studentId || undefined,
+      homeAddress,  
       program,
       yearOfStudy,
       loanTitle,
       amount: Number(amount),
       purpose,
 
+      // 
       // ✅ SAVE URLS DIRECTLY
       idDocumentUrl,
       schoolIdDocumentUrl,

@@ -9,12 +9,15 @@ import {
   Linking,
   ActivityIndicator,
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
+import { MainStackParamList } from '../../navigation/MainStack';
 import { Header, HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 export type ScholarshipDetailProps = NativeStackScreenProps<
   ScholarshipsStackParamList,
@@ -27,6 +30,8 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
   route,
   navigation,
 }) => {
+  const { user } = useAuth();
+
   const { id } = route.params;
 
   const [scholarship, setScholarship] = useState<any>(null);
@@ -54,6 +59,39 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
 
     fetchScholarship();
   }, [id]);
+ 
+  // 🔹 APPLY NOW WITH CONFIRMATION
+
+  const handleApplyNow = () => {
+  // ❌ Not logged in
+  if (!user) {
+    Alert.alert(
+      'Login Required',
+      'You must be logged in to apply for this scholarship.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'OK',
+          onPress: () =>
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
+              })
+            ),
+        },
+      ]
+    );
+    return;
+  }
+
+  // ✅ Logged in → proceed
+  navigation.navigate('ScholarshipApply', {
+    scholarshipId: scholarship._id,
+    scholarshipTitle: scholarship.title,
+  });
+};
+
 
   // 🔹 DOWNLOAD COURSE LIST WITH CONFIRMATION
   const handleCourseDownload = () => {
@@ -134,17 +172,13 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.applyButton}
+           style={styles.applyButton}
             activeOpacity={0.9}
-            onPress={() =>
-              navigation.navigate('ScholarshipApply', {
-                scholarshipId: scholarship._id,
-                scholarshipTitle: scholarship.title
-              })
-            }
-          >
-            <Text style={styles.applyButtonText}>APPLY NOW</Text>
-          </TouchableOpacity>
+             onPress={handleApplyNow}
+            >
+          <Text style={styles.applyButtonText}>APPLY NOW</Text>
+    </TouchableOpacity>
+
         </View>
       </ScrollView>
     </View>

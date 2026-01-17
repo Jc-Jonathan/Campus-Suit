@@ -12,6 +12,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
+import { Picker } from '@react-native-picker/picker';
+import { TextInput } from 'react-native';
 
 type StoreHomeScreenNavigationProp =
   NativeStackNavigationProp<RootStackParamList, 'ProductDetail'>;
@@ -28,22 +30,81 @@ interface Product {
   oldPrice?: number;
 }
 
+
 export const StoreHomeScreen: React.FC = () => {
   const navigation = useNavigation<StoreHomeScreenNavigationProp>();
   const [products, setProducts] = useState<Product[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [filtersLoading, setFiltersLoading] = useState(true);
 
   const API_URL = 'http://192.168.31.130:5000/api/products';
 
   useEffect(() => {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(err => console.log(err))
-      .finally(() => setLoading(false));
+    const fetchFilters = async () => {
+      try {
+        setFiltersLoading(true);
+        const [typesResponse, brandsResponse] = await Promise.all([
+          fetch(`${API_URL}/filters/types`),
+          fetch(`${API_URL}/filters/brands`),
+        ]);
+
+        if (!typesResponse.ok || !brandsResponse.ok) {
+          throw new Error('Failed to fetch filters');
+        }
+
+        const [typesData, brandsData] = await Promise.all([
+          typesResponse.json(),
+          brandsResponse.json(),
+        ]);
+
+        setTypes(Array.isArray(typesData) ? typesData : []);
+        setBrands(Array.isArray(brandsData) ? brandsData : []);
+      } catch (error) {
+        console.error('Error fetching filters:', error);
+        // Set empty arrays if there's an error
+        setTypes([]);
+        setBrands([]);
+      } finally {
+        setFiltersLoading(false);
+      }
+    };
+
+    fetchFilters();
   }, []);
 
-  if (loading) {
+
+const fetchProducts = () => {
+  setLoading(true);
+
+  const params = new URLSearchParams();
+
+  if (selectedType) params.append('type', selectedType);
+  if (selectedBrand) params.append('brand', selectedBrand);
+  if (searchQuery) params.append('search', searchQuery);
+
+  fetch(`${API_URL}/filter?${params.toString()}`)
+    .then(res => res.json())
+    .then(data => setProducts(data))
+    .finally(() => setLoading(false));
+};
+
+
+useEffect(() => {
+  fetchProducts();
+}, [selectedType, selectedBrand]);
+
+useEffect(() => {
+  fetchProducts();
+}, [searchQuery]);
+
+
+  if (loading || filtersLoading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#111" />
@@ -53,8 +114,48 @@ export const StoreHomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>All Products</Text>
+      <View style={styles.filters}>
+  {/* PRODUCT TYPE */}
+  <Picker
+    selectedValue={selectedType}
+    onValueChange={value => setSelectedType(value)}
+  >
+    <Picker.Item label="All Types" value="" />
+    {Array.isArray(types) && types.map(type => (
+      <Picker.Item key={type} label={type} value={type} />
+    ))}
+  </Picker>
 
+  {/* PRODUCT BRAND */}
+  <Picker
+    selectedValue={selectedBrand}
+    onValueChange={value => setSelectedBrand(value)}
+  >
+    <Picker.Item label="All Brands" value="" />
+    {Array.isArray(brands) && brands.map(brand => (
+      <Picker.Item key={brand} label={brand} value={brand} />
+    ))}
+  </Picker>
+
+  {/* SEARCH */}
+  <TextInput
+  placeholder="Search product name..."
+  value={searchInput}
+  onChangeText={setSearchInput}
+  style={styles.search}
+/>
+<Pressable
+  style={styles.searchBtn}
+  onPress={() => {
+    setSearchQuery(searchInput);
+  }}
+>
+  <Text style={styles.searchBtnText}>Search</Text>
+</Pressable>
+
+</View>
+
+      <Text style={styles.heading}>All Products</Text>
       <FlatList
         data={products}
         numColumns={2}
@@ -114,6 +215,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+ filters: {
+  paddingHorizontal: 12,
+  marginBottom: 10,
+},
+searchBtn: {
+  backgroundColor: '#0e5eaeff',
+  paddingVertical: 12,
+  borderRadius: 10,
+  marginTop: 10,
+  alignItems: 'center',
+},
+
+searchBtnText: {
+  color: '#fff',
+  fontWeight: '700',
+},
+
+
+search: {
+  backgroundColor: '#fff',
+  padding: 10,
+  borderRadius: 10,
+  marginTop: 8,
+  borderWidth: 1,
+  borderColor: '#ddd',
+},
 
   list: {
     paddingHorizontal: 12,

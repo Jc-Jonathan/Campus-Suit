@@ -1,12 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Image, TouchableOpacity, Modal, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Image, TouchableOpacity, Modal, Pressable, BackHandler, Alert } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderTab } from '../../components/Header';
 import { theme } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
-
 const CARDS = [
   {
     key: 'loan',
@@ -31,12 +30,7 @@ const CARDS = [
   }
 ];
 
-const IMAGE_CARDS: Record<string, any> = {
-  loan: require('../../../assets/images/loan.jpg'),
-  scholarship: require('../../../assets/images/scholarship.jpg'),
-  store: require('../../../assets/images/store.jpg'),
-  finance: require('../../../assets/images/finance.jpg'),
-};
+
 
 const BUTTON_LABELS: Record<string, string> = {
   loan: 'Get a loan quote',
@@ -49,6 +43,15 @@ export const HomeScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView | null>(null);
   const navigation = useNavigation<any>();
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [homeBanners, setHomeBanners] = useState<any[]>([]);
+  
+  useEffect(() => {
+  fetch('http://192.168.31.130:5000/api/banners?screen=HOME&position=CAROUSEL')
+    .then(res => res.json())
+    .then(json => setHomeBanners(json.data || []))
+    .catch(console.error);
+}, []);
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,8 +62,45 @@ export const HomeScreen: React.FC = () => {
       setActiveIndex(nextIndex);
     }, 4000);
 
-    return () => clearInterval(interval);
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Handle back button press if needed
+      return false; // Return false to let the default back button behavior
+    });
+
+    return () => {
+      clearInterval(interval);
+      backHandler.remove(); // Proper way to remove the event listener
+    };
   }, [activeIndex]);
+
+  useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      Alert.alert(
+        'Exit App',
+        'Are you sure you want to exit?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Yes',
+            onPress: () => BackHandler.exitApp(),
+          },
+        ],
+        { cancelable: true }
+      );
+
+      return true; // ⛔ stop default back behavior
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => subscription.remove();
+  }, [])
+);
+
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -138,10 +178,12 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.imageCardContainer}>
           <TouchableOpacity activeOpacity={0.9} onPress={openImageModal}>
             <Image
-              source={IMAGE_CARDS[activeCard.key]}
+               source={{ uri: homeBanners[activeIndex]?.imageUrl }}
+               resizeMode="cover"
               style={styles.imageCard}
-              resizeMode="cover"
-            />
+               />
+
+            
             <View style={styles.imageOverlay}>
               <Text style={styles.imageTitle}>{activeCard.title}</Text>
               <View style={styles.imageButtonWrapper}>
@@ -173,7 +215,7 @@ export const HomeScreen: React.FC = () => {
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
             <Image
-              source={IMAGE_CARDS[activeCard.key]}
+              source={{ uri: homeBanners[activeIndex]?.imageUrl }}
               style={styles.modalImage}
               resizeMode="contain"
             />

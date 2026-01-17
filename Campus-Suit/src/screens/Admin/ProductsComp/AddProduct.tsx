@@ -18,6 +18,8 @@ import { RootStackParamList } from '../../../types/navigation';
 
 interface ProductData {
   name: string;
+  productType: string;    // ✅
+  productBrand: string;   // ✅
   description: string;
   imageUrl: string;
   newPrice: string;
@@ -33,6 +35,8 @@ interface AddProductProps {
 export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess, navigation }) => {
   const [product, setProduct] = useState<Omit<ProductData, 'id'>>({
     name: '',
+    productType: '',
+  productBrand: '',
     description: '',
     imageUrl: '',
     newPrice: '',
@@ -59,7 +63,7 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
   };
 
   const handleSubmit = async () => {
-    if (!product.name || !product.description || !product.newPrice || !product.imageUrl) {
+    if (!product.name || !product.productType ||!product.productBrand || !product.description || !product.newPrice || !product.imageUrl) {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
       return;
     }
@@ -72,6 +76,8 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
         },
         body: JSON.stringify({
           name: product.name,
+          productType: product.productType,
+          productBrand: product.productBrand,
           description: product.description,
           imageUrl: product.imageUrl,
           newPrice: Number(product.newPrice),
@@ -113,6 +119,30 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
             returnKeyType="next"
           />
         </View>
+        <View style={styles.formGroup}>
+  <Text style={styles.label}>Product Type</Text>
+  <TextInput
+    style={styles.input}
+    value={product.productType}
+    onChangeText={(text) =>
+      setProduct({ ...product, productType: text })
+    }
+    placeholder="e.g. Electronics, Books"
+  />
+</View>
+
+<View style={styles.formGroup}>
+  <Text style={styles.label}>Product Brand</Text>
+  <TextInput
+    style={styles.input}
+    value={product.productBrand}
+    onChangeText={(text) =>
+      setProduct({ ...product, productBrand: text })
+    }
+    placeholder="e.g. Samsung, Apple"
+  />
+</View>
+
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Product Description</Text>

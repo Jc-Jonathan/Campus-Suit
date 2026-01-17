@@ -8,6 +8,7 @@ import { theme } from '../../theme/theme';
 import { AdminStackParamList } from '../../navigation/AdminStack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { TabsFlow } from '../../navigation/TabsFlow';
 
 type AdminScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<AdminStackParamList, 'AdminDashboard'>,
@@ -18,41 +19,32 @@ export const AdminDashboard: React.FC = () => {
   const navigation = useNavigation<AdminScreenNavigationProp>();
 
   useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-          return true;
-        }
-        return false;
-      };
+  useCallback(() => {
+    const onBackPress = () => {
+      // Navigate to the Tabs screen which is the parent of the Admin stack
+      navigation.navigate('Tabs' as never);
+      return true; // Prevent default back behavior
+    };
 
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      
-      return () => subscription.remove();
-    }, [navigation])
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => subscription.remove();
+  }, [navigation])
 );
 
+
   const goToLoans = () => navigation.navigate('AdminLoans');
-  const goToOrders = () => navigation.navigate('AdminOrders');
+  const goToOrders = () => navigation.navigate('AdminBanners');
   const goToProducts = () => navigation.navigate('AdminProducts');
   const goToScholarships = () => navigation.navigate('AdminScholarships');
   const goToUsers = () => navigation.navigate('AdminUsers');
   const goToNotification = () => navigation.navigate('AdminNotification');
 
   const auth = useAuth();
-const handleExitDashboard = async () => {
-  if (auth) {
-    await auth.logout();
-    // Reset the entire navigation stack and navigate to MainTabs
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      })
-    );
-  }
-};
+
 
   return (
     <View style={styles.container}>
@@ -85,15 +77,6 @@ const handleExitDashboard = async () => {
               <AppButton label="Notifications" onPress={goToNotification} />
             </View>
           </View>
-        </View>
-        
-        <View style={styles.exitButtonContainer}>
-          <AppButton
-            label="Exit Dashboard"
-            onPress={handleExitDashboard}
-            style={styles.exitButton}
-            textStyle={styles.exitButtonText}
-          />
         </View>
       </ScrollView>
     </View>

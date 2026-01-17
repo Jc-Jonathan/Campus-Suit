@@ -1,18 +1,42 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, View } from 'react-native';
+import React, { ReactNode } from 'react';
+import { 
+  TouchableOpacity, 
+  Text, 
+  StyleSheet, 
+  ActivityIndicator, 
+  ViewStyle, 
+  TextStyle, 
+  View, 
+  StyleProp 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/theme';
 
+type ButtonVariant = 'primary' | 'ghost' | 'outline';
+
 interface Props {
-  label: string;
+  /** Button label text */
+  label?: string;
+  /** Function called when button is pressed */
   onPress: () => void;
-  variant?: 'primary' | 'ghost' | 'outline';
+  /** Visual style variant */
+  variant?: ButtonVariant;
+  /** Show loading indicator */
   loading?: boolean;
-  style?: ViewStyle | ViewStyle[];
-  textStyle?: any; // You might want to use Text['style'] from react-native for better type safety
+  /** Disable the button */
+  disabled?: boolean;
+  /** Custom container style */
+  style?: StyleProp<ViewStyle>;
+  /** Custom text style */
+  textStyle?: StyleProp<TextStyle>;
+  /** Optional left icon name (from Ionicons) */
   leftIcon?: string;
+  /** Size of the icon */
   iconSize?: number;
+  /** Color of the icon */
   iconColor?: string;
+  /** Custom content to render inside the button */
+  children?: ReactNode;
 }
 
 export const AppButton: React.FC<Props> = ({ 
@@ -20,27 +44,36 @@ export const AppButton: React.FC<Props> = ({
   onPress, 
   variant = 'primary', 
   loading, 
+  disabled,
   style,
   textStyle,
   leftIcon,
   iconSize = 20,
-  iconColor
+  iconColor,
+  children
 }) => {
   const isPrimary = variant === 'primary';
   const isOutline = variant === 'outline';
 
+  const variantStyles: { [key in ButtonVariant]: ViewStyle } = {
+    primary: styles.primary,
+    outline: styles.outline,
+    ghost: styles.ghost,
+  };
+
+  const buttonStyles: StyleProp<ViewStyle> = [
+    styles.base,
+    variantStyles[variant],
+    style,
+    (disabled || loading) && styles.disabled,
+  ];
+
   return (
     <TouchableOpacity
-      style={[
-        styles.base,
-        isPrimary && styles.primary,
-        isOutline && styles.outline,
-        !isPrimary && !isOutline && styles.ghost,
-        style
-      ]}
-      activeOpacity={0.85}
+      style={buttonStyles}
       onPress={onPress}
-      disabled={loading}
+      activeOpacity={0.8}
+      disabled={disabled || loading}
     >
       {loading ? (
         <ActivityIndicator color={isPrimary ? '#fff' : theme.colors.primary} />
@@ -54,16 +87,18 @@ export const AppButton: React.FC<Props> = ({
               style={styles.icon}
             />
           )}
-          <Text
-            style={[
-              styles.label,
-              (isOutline || !isPrimary) && { color: theme.colors.primary },
-              leftIcon && { marginLeft: 8 },
-              textStyle,
-            ]}
-          >
-            {label}
-          </Text>
+          {children || (
+            <Text
+              style={[
+                styles.label,
+                (isOutline || !isPrimary) && { color: theme.colors.primary },
+                leftIcon && { marginLeft: 8 },
+                textStyle,
+              ]}
+            >
+              {label}
+            </Text>
+          )}
         </View>
       )}
     </TouchableOpacity>

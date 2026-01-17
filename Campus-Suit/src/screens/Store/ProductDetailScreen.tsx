@@ -5,17 +5,28 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { StoreStackParamList } from '../../navigation/StoreStack';
+import { RootStackParamList } from '../../types/navigation';
 import { HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
 import { theme } from '../../theme/theme';
-
-type Props = NativeStackScreenProps<
-  StoreStackParamList,
-  'ProductDetail'
->;
+import { StoreStackParamList } from '../../navigation/StoreStack';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { router } from 'expo-router';
+type Props = {
+  navigation: {
+    navigate: (screen: 'SignIn' | 'Cart' | 'Checkout' | 'Auth', params?: any) => void;
+  };
+  route: {
+    params: {
+      productId: number;
+    };
+  };
+};
 
 interface Product {
   productId: number;
@@ -26,19 +37,45 @@ interface Product {
   oldPrice?: number;
 }
 
-export const ProductDetailScreen: React.FC<Props> = ({ route }) => {
-  const { id } = route.params;
+export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+  const { productId } = route.params;
   const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+  const { user, isLoggedIn } = useAuth();
 
-  const API_URL = 'http://192.168.31.130:5000/api/products';
+  const API_URL = `http://192.168.31.130:5000/api/products`;
 
   useEffect(() => {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then((data: Product[]) =>
-        setProduct(data.find(p => p.productId === Number(id)) || null)
-      );
-  }, [id]);
+    fetch(`${API_URL}/${productId}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch product');
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log('Product data:', data);
+        if (Array.isArray(data)) {
+          setProduct(data[0] || null);
+        } else {
+          setProduct(data);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching product:', error);
+        setProduct(null);
+      })
+      .finally(() => setLoading(false));
+  }, [productId]);
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   if (!product) {
     return (
@@ -53,12 +90,14 @@ export const ProductDetailScreen: React.FC<Props> = ({ route }) => {
     <View style={styles.container}>
       <HeaderTab />
 
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* IMAGE */}
         <View style={styles.hero}>
           <Image
             source={{ uri: product.imageUrl }}
             style={styles.heroImage}
+            onError={(error) => console.log('Image load error:', error.nativeEvent.error)}
+            resizeMode="contain"
           />
         </View>
 
@@ -66,26 +105,60 @@ export const ProductDetailScreen: React.FC<Props> = ({ route }) => {
         <View style={styles.card}>
           <Text style={styles.name}>{product.name}</Text>
 
-          <Text style={styles.description}>
-            {product.description}
-          </Text>
-
-          {/* PRICE ROW */}
           <View style={styles.priceRow}>
+            <Text style={styles.newPrice}>₹{product.newPrice}</Text>
             {product.oldPrice && (
               <Text style={styles.oldPrice}>
                 ₹{product.oldPrice}
               </Text>
             )}
-            <Text style={styles.newPrice}>
-              ₹{product.newPrice}
-            </Text>
           </View>
 
-          {/* BUTTONS */}
+          <Text style={styles.description}>
+            {product.description}
+          </Text>
+
           <View style={styles.actions}>
-            <AppButton label="Add to Cart" onPress={() => {}} />
-            <AppButton label="Order Now" onPress={() => {}} />
+            <AppButton
+              style={{ flex: 1 }}
+              label="Add to Cart"
+              variant="outline"
+              onPress={() => {
+                addToCart({
+                  productId: product.productId,
+                  name: product.name,
+                  imageUrl: product.imageUrl,
+                  newPrice: product.newPrice,
+                  oldPrice: product.oldPrice,
+                });
+                // Navigate to Cart screen
+                navigation.navigate('Cart' as never);
+              }}
+            />
+
+           <AppButton
+              label="Order Now"
+              style={{ flex: 1 }}
+           onPress={() => {
+            if (!isLoggedIn) {
+           Alert.alert(
+            'Login Required',
+               'Please login to continue',
+            [
+             {
+            text: 'Login',
+            onPress: () =>
+              navigation.navigate('AuthFlow' as never),
+          },
+        ]
+      );
+      return;
+    }
+
+    navigation.navigate('Checkout', { product });
+  }}
+/>
+
           </View>
         </View>
       </ScrollView>
@@ -94,62 +167,79 @@ export const ProductDetailScreen: React.FC<Props> = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-
-  hero: {
-    height: 280,
+  container: {
+    flex: 1,
     backgroundColor: '#fff',
+  },
+  hero: {
+    height: 300,
+    backgroundColor: '#f8f8f8',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-
   heroImage: {
-    width: '85%',
-    height: '85%',
+    width: '100%',
+    height: '100%',
     resizeMode: 'contain',
   },
-
-  card: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
-
+  // Muted text style
+  muted: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 16,
+    marginTop: 20,
+    padding: 20,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   name: {
-    fontSize: theme.typography.subtitle,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
     marginBottom: 8,
   },
-
-  description: {
-    fontSize: theme.typography.body,
-    color: theme.colors.textMuted,
-    marginBottom: theme.spacing.lg,
-  },
-
   priceRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-
   newPrice: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: theme.colors.primary,
+    marginRight: 12,
   },
-
   oldPrice: {
     fontSize: 16,
-    color: 'red',
+    color: '#e90707ff',
     textDecorationLine: 'line-through',
   },
-
-  actions: {
-    gap: theme.spacing.sm,
+  description: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '300',
+    lineHeight: 22,
+    marginBottom: 24,
   },
-
-  muted: {
-    padding: 20,
-    color: theme.colors.textMuted,
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
   },
 });

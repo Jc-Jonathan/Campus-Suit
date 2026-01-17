@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/user');
+const sendEmail = require('../utils/sendEmail'); // adjust path if needed
 
 /* ===================== AUTO USER ID ===================== */
 async function getNextUserId() {
@@ -61,14 +62,79 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
     res.json({
-      message: 'Login successful',
-      userId: user.userId,
-      role: 'user',
-    });
+  message: 'Login successful',
+  userId: user.userId,
+  email: user.email,   // ✅ ADD THIS
+  role: 'user',
+});
+
   } catch {
     res.status(500).json({ message: 'Server error' });
   }
 })
+
+/* ===================== FORGOT PASSWORD (SEND CODE) ===================== */
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Security: do not reveal user existence
+      return res.json({ message: 'If email exists, code sent' });
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    user.resetPasswordToken = code;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    await sendEmail(
+      email,
+      'Password Reset Code',
+      `Your password reset code is:\n\n${code}\n\nThis code expires in 10 minutes.`
+    );
+
+    res.json({ message: 'Reset code sent to email' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/* ===================== RESET PASSWORD ===================== */
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: 'All fields required' });
+    }
+
+    const user = await User.findOne({
+      email,
+      resetPasswordToken: code,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 /* ===================== GET PROFILE BY ID ===================== */

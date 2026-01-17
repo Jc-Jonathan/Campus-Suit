@@ -67,7 +67,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         <AppButton 
           label="Sign In" 
           onPress={() => navigation.navigate('SignIn')}
-          style={{ marginTop: 20 }}
+          style={{ marginTop: 50,width: '60%' }}
         />
       </View>
     );

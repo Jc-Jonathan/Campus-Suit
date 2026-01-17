@@ -16,9 +16,10 @@ import { AppButton } from '../../components/AppButton';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface ApiResponse {
-  message?: string;
   userId?: number;
+  email?: string;
   role?: string;
+  message?: string;
 }
 
 export const SignInScreen = () => {
@@ -95,15 +96,14 @@ export const SignInScreen = () => {
         return;
       }
 
-      await loginAsStudent(data.userId);
+      await loginAsStudent(data.userId, data.email!);
       setPassword('');
 
-      Alert.alert('Success', 'You successfully signed in', [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('ProfileHome'),
-        },
-      ]);
+      // Navigate to the Profile tab after successful login
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Tabs', params: { screen: 'Profile' } }],
+      });
     } catch {
       Alert.alert('Error', 'Server not reachable');
       setPassword('');
@@ -208,12 +208,18 @@ export const SignInScreen = () => {
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
-            <TouchableOpacity
-              style={styles.forgotPasswordLink}
-              onPress={() => navigation.navigate('PasswordUpdate')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            <View style={styles.linksContainer}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SignUp')}
+              >
+                <Text style={styles.linkText}>Sign Up!!!</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PasswordUpdate')}
+              >
+                <Text style={styles.linkText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.buttonsRow}>
               <AppButton
@@ -265,15 +271,16 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  forgotPasswordLink: {
-    alignSelf: 'flex-end',
+  linksContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    padding: 8,
-    marginRight: 4,
+    paddingHorizontal: 4,
   },
-  forgotPasswordText: {
+  linkText: {
     color: theme.colors.primary,
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '500',
+    padding: 8,
   },
 });

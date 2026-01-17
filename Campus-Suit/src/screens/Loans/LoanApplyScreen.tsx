@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { PickedFile } from '../../components/DocumentPickerButton';
-import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform, Modal, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
 import { Header, HeaderTab } from '../../components/Header';
@@ -10,10 +13,15 @@ import { DocumentPickerButton } from '../../components/DocumentPickerButton';
 import { theme } from '../../theme/theme';
 import { API_URL } from '../../config';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useAuth } from '../../contexts/AuthContext';
 
 export type LoanApplyProps = NativeStackScreenProps<LoansStackParamList, 'LoanApply'>;
 
 export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route }) => {
+  const { userId, loading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   // Personal information
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
@@ -47,6 +55,10 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
   const [loanTitle, setLoanTitle] = useState('');
   const [loadingLoan, setLoadingLoan] = useState(true);
   const [emailError, setEmailError] = useState('');
+  const [homeAddress, setHomeAddress] = useState('');
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [addressText, setAddressText] = useState('');
 
   const submissionDate = new Date().toISOString().split('T')[0];
 
@@ -72,6 +84,49 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
 
     fetchLoanTitle();
   }, [route.params]);
+    
+useEffect(() => {
+  if (authLoading) return; // Wait for auth restore
+  if (!userId) return;
+
+  const fetchUserProfile = async () => {
+    setIsLoading(true);
+    setProfileError(null);
+    
+    try {
+      const res = await fetch(`${API_URL}/api/auth/me/${userId}`);
+      if (!res.ok) throw new Error('Failed to fetch user profile');
+
+      const user = await res.json();
+      console.log('Fetched user profile:', user);
+
+      // Update form fields with user data
+      setEmail(user.email || '');
+      // Combine country code with phone number if both exist
+      const formattedPhone = user.phoneNumber 
+        ? `${user.phoneCode || ''} ${user.phoneNumber}`.trim()
+        : '';
+      setPhone(formattedPhone);
+      setFullName(user.fullName || '');
+      setGender(user.gender || '');
+      
+      // Format and set date of birth if available
+      if (user.dob) {
+        const formattedDob = new Date(user.dob).toISOString().split('T')[0];
+        setDob(formattedDob);
+        setDobDate(new Date(user.dob));
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      setProfileError('Failed to load your profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchUserProfile();
+}, [userId, authLoading]);
+
 
    const canSubmit = confirmAccurate && agreeTerms && understandRisk;
 
@@ -89,12 +144,74 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
     }
   };
 
+  const getCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to get your current location');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+      
+      // Get address from coordinates
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode.length > 0) {
+        const { street, city, region, country, postalCode } = geocode[0];
+        const address = `${street ? street + ', ' : ''}${city ? city + ', ' : ''}${region ? region + ', ' : ''}${country || ''} ${postalCode || ''}`.trim();
+        setAddressText(address);
+        setHomeAddress(address);
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get your current location');
+    }
+  };
+
+  const handleMapRegionChange = async (region: any) => {
+    const newLocation = {
+      coords: {
+        latitude: region.latitude,
+        longitude: region.longitude,
+        altitude: null,
+        accuracy: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: Date.now(),
+    };
+    setLocation(newLocation);
+    
+    // Get address from coordinates
+    const geocode = await Location.reverseGeocodeAsync({
+      latitude: newLocation.coords.latitude,
+      longitude: newLocation.coords.longitude,
+    });
+
+    if (geocode.length > 0) {
+      const { street, city, region, country, postalCode } = geocode[0];
+      const address = `${street ? street + ', ' : ''}${city ? city + ', ' : ''}${region ? region + ', ' : ''}${country || ''} ${postalCode || ''}`.trim();
+      setAddressText(address);
+    }
+  };
+
   const handleSubmit = async () => {
     if (loading) return;
 
-    // Validate email before submission
+    // Validate required fields
     if (!validateEmail(email)) {
       setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    if (!homeAddress?.trim()) {
+      Alert.alert('Validation Error', 'Please enter your home address');
       return;
     }
 
@@ -111,6 +228,7 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
       formData.append('phone', phone);
       formData.append('email', email);
       if (studentId) formData.append('studentId', studentId);
+      formData.append('homeAddress', homeAddress);
       formData.append('program', program);
       formData.append('yearOfStudy', yearOfStudy);
       formData.append('loanTitle', loanTitle);
@@ -146,18 +264,37 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
         } as any);
       }
 
+      // Log form data for debugging
+      console.log('FormData content:');
+      for (let [key, value] of (formData as any)._parts) {
+        console.log(key, value);
+      }
+
       const response = await fetch(`${API_URL}/api/loanApplys`, {
         method: 'POST',
         body: formData,
+        // Don't set Content-Type header - let the browser set it with the correct boundary
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
         },
       });
 
-      const data = await response.json();
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        throw new Error('Invalid response from server');
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit application');
+        console.error('Server responded with error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        });
+        throw new Error(data.message || `Server error: ${response.status} ${response.statusText}`);
       }
 
       Alert.alert(
@@ -168,13 +305,30 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
           onPress: () => navigation.navigate('LoanStatus', { id: data.loanId || '' })
         }]
       );
-    } catch (error) {
-  console.error('Error submitting application:', error);
-  const errorMessage = error instanceof Error ? error.message : 'Failed to submit application';
-  Alert.alert('Error', errorMessage);
-} finally {
-  setLoading(false);
-}
+    } catch (error: unknown) {
+      let errorMessage = 'Failed to submit application. Please check your internet connection and try again.';
+      
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
+        errorMessage = error.message || errorMessage;
+      }
+
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const apiError = error as { response: { data: { message?: string } } };
+        if (apiError.response?.data?.message) {
+          errorMessage = apiError.response.data.message;
+        }
+      }
+
+      Alert.alert('Error', errorMessage
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDobChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -220,22 +374,110 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
         label="Gender" 
         placeholder='Enter Your Gender'
         value={gender} onChangeText={setGender} />
-        <AppInput
-          label="Phone number"
-          placeholder='Enter your Phone Number'
-          value={phone}
-          keyboardType="phone-pad"
-          onChangeText={setPhone}
-        />
-        <AppInput
-          label="Email address"
-          placeholder='Enter your Email'
-          required={true}
-          value={email}
-          keyboardType="email-address"
-          onChangeText={handleEmailChange}
-        />
+         <AppInput
+           label="Phone number"
+           value={isLoading ? 'Loading...' : (phone || 'Not provided')}
+           editable={false}
+           placeholder="Loading..."
+         />
+       
+         <AppInput
+           label="Email address"
+           value={email}
+           editable={false}
+           placeholder="Loading..."
+         />
+
+         
         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+
+<View style={styles.addressContainer}>
+          <View style={styles.addressInputWrapper}>
+            <AppInput
+              label="Home address"
+              placeholder="Enter your home address"
+              value={homeAddress}
+              multiline
+              onChangeText={setHomeAddress}
+              style={{ width: '100%' }}
+            />
+          </View>
+          <TouchableOpacity 
+            style={styles.locationButton}
+            onPress={() => {
+              setLocationModalVisible(true);
+              getCurrentLocation();
+            }}
+          >
+            <Ionicons name="location" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Location Picker Modal */}
+        <Modal
+          visible={locationModalVisible}
+          animationType="slide"
+          onRequestClose={() => setLocationModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Your Location</Text>
+              <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.mapContainer}>
+              {location ? (
+                <MapView
+                  style={styles.map}
+                  initialRegion={{
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                  }}
+                  onRegionChangeComplete={handleMapRegionChange}
+                  showsUserLocation={true}
+                  followsUserLocation={true}
+                >
+                  <Marker
+                    coordinate={{
+                      latitude: location.coords.latitude,
+                      longitude: location.coords.longitude,
+                    }}
+                    title="Your Location"
+                  />
+                </MapView>
+              ) : (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <Text style={styles.loadingText}>Loading map...</Text>
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.addressPreview}>
+              <Text style={styles.addressLabel}>Selected Address:</Text>
+              <Text style={styles.addressText} numberOfLines={2}>
+                {addressText || 'No address selected'}
+              </Text>
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <AppButton
+                label="Confirm Location"
+                onPress={() => {
+                  setHomeAddress(addressText);
+                  setLocationModalVisible(false);
+                }}
+                disabled={!location}
+              />
+            </View>
+          </View>
+        </Modal>
+
+
         <AppInput
           label="Student ID (if applicable)"
           placeholder='Enter your Student ID'
@@ -355,6 +597,77 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
 };
 
 const styles = StyleSheet.create({
+  // Location picker styles
+  addressContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing.sm,
+    width: '100%',
+  },
+  addressInputWrapper: {
+    flex: 1,
+    marginRight: 10,
+  },
+  locationButton: {
+    marginTop:20,
+    padding: 10,
+    marginLeft: 10,
+    borderRadius: 5,
+    backgroundColor: theme.colors.surface,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  mapContainer: {
+    flex: 1,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    color: theme.colors.textMuted,
+  },
+  addressPreview: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  addressLabel: {
+    fontWeight: '500',
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.textMuted,
+  },
+  addressText: {
+    color: theme.colors.text,
+    fontSize: 16,
+  },
+  modalFooter: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+  },
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   sectionTitle: {

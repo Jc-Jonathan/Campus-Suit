@@ -20,9 +20,24 @@ async function getNextProductId() {
 
 router.post('/add', async (req, res) => {
   try {
-    const { name, description, imageUrl, newPrice, oldPrice } = req.body;
+    const {
+      name,
+      productType,
+      productBrand,
+      description,
+      imageUrl,
+      newPrice,
+      oldPrice,
+    } = req.body;
 
-    if (!name || !description || !imageUrl || !newPrice) {
+    if (
+      !name ||
+      !productType ||
+      !productBrand ||
+      !description ||
+      !imageUrl ||
+      !newPrice
+    ) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -31,6 +46,8 @@ router.post('/add', async (req, res) => {
     const product = new Product({
       productId,
       name,
+      productType,
+      productBrand,
       description,
       imageUrl,
       newPrice,
@@ -50,6 +67,7 @@ router.post('/add', async (req, res) => {
 });
 
 
+
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find().sort({ productId: 1 });
@@ -59,33 +77,83 @@ router.get('/', async (req, res) => {
   }
 });
 
-// UPDATE PRODUCT
-router.put('/:productId', async (req, res) => {
+
+//GET ALL PRODUCT TYPES
+router.get('/filters/types', async (req, res) => {
   try {
-    const productId = Number(req.params.productId);
-    const { name, description, imageUrl, newPrice, oldPrice } = req.body;
-
-    const updated = await Product.findOneAndUpdate(
-      { productId },
-      { name, description, imageUrl, newPrice, oldPrice },
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    res.json({
-      message: 'Product updated successfully',
-      product: updated,
-    });
+    const types = await Product.distinct('productType');
+    res.json(types);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// GET ALL PRODUCT BRANDS
+router.get('/filters/brands', async (req, res) => {
+  try {
+    const brands = await Product.distinct('productBrand');
+    res.json(brands);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
+// FILTER PRODUCTS
+router.get('/filter', async (req, res) => {
+  try {
+    const { type, brand, search } = req.query;
 
+    const query = {};
+
+    if (type) query.productType = type;
+    if (brand) query.productBrand = brand;
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    const products = await Product.find(query).sort({ productId: 1 });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// UPDATE PRODUCT
+router.put('/:productId', async (req, res) => {
+  try {
+    console.log('UPDATE BODY:', req.body); // 👈 ADD THIS
+
+    const productId = Number(req.params.productId);
+    const { name, productType, productBrand, description, imageUrl, newPrice, oldPrice } = req.body;
+
+    const updated = await Product.findOneAndUpdate(
+      { productId },
+      { name, productType, productBrand, description, imageUrl, newPrice, oldPrice },
+      { new: true }
+    );
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// GET SINGLE PRODUCT
+router.get('/:productId', async (req, res) => {
+  try {
+    const productId = Number(req.params.productId);
+
+    const product = await Product.findOne({ productId });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+//DELETE PRODUCT
 router.delete('/:productId', async (req, res) => {
   try {
     const productId = Number(req.params.productId);

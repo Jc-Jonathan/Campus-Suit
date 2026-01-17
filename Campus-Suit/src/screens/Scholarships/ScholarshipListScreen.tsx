@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   viewStatusButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 3,
     left: 20,
     right: 20,
     backgroundColor: theme.colors.primary,

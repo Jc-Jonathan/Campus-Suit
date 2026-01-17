@@ -16,6 +16,8 @@ import { RootStackParamList } from '../../../types/navigation';
 export interface Product {
   productId: number;
   name: string;
+  productType: string;     // ✅
+  productBrand: string;    // ✅
   imageUrl: string;
   newPrice: number;
   oldPrice?: number;
@@ -75,31 +77,48 @@ export const AllProducts = ({ navigation }: AllProductsProps) => {
   };
 
   const renderItem = ({ item }: { item: Product }) => (
-    <View style={styles.row}>
-      <View style={[styles.cell, styles.imageCell]}>
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
-      </View>
-
-      <Text style={styles.cell}>{item.name}</Text>
-      <Text style={styles.cell}>₹ {item.newPrice}</Text>
-      <Text style={styles.cell}>
-        {item.oldPrice ? `₹ ${item.oldPrice}` : '—'}
-      </Text>
-
-      <View style={[styles.cell, styles.actionCell]}>
-        <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
-          <Ionicons name="create-outline" size={20} color="#27ae60" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => handleDelete(item.productId)}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="trash-outline" size={20} color="#e74c3c" />
-        </TouchableOpacity>
-      </View>
+  <View style={styles.row}>
+    <View style={[styles.cell, { width: 90 }]}>
+      <Image source={{ uri: item.imageUrl }} style={styles.image} />
     </View>
-  );
+
+    <View style={styles.cell}>
+      <Text style={styles.cellText}>{String(item.name)}</Text>
+    </View>
+
+    <View style={styles.cell}>
+      <Text style={styles.cellText}>{String(item.productType)}</Text>
+    </View>
+
+    <View style={styles.cell}>
+      <Text style={styles.cellText}>{String(item.productBrand)}</Text>
+    </View>
+
+    <View style={styles.cell}>
+      <Text style={styles.cellText}>₹ {item.newPrice}</Text>
+    </View>
+
+    <View style={styles.cell}>
+      <Text style={styles.cellText}>
+        {item.oldPrice ? `₹ ${item.oldPrice}` : String('—')}
+      </Text>
+    </View>
+
+    <View style={[styles.cell, styles.actionCell]}>
+      <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
+        <Ionicons name="create-outline" size={20} color="#27ae60" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => handleDelete(item.productId)}
+        style={styles.iconBtn}
+      >
+        <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
 
   return (
     <View style={styles.container}>
@@ -108,11 +127,14 @@ export const AllProducts = ({ navigation }: AllProductsProps) => {
         <View>
           {/* TABLE HEADER */}
           <View style={styles.header}>
-            <Text style={[styles.headerText, styles.imageCell]}>Image</Text>
-            <Text style={styles.headerText}>Name</Text>
-            <Text style={styles.headerText}>New Price</Text>
-            <Text style={styles.headerText}>Old Price</Text>
-            <Text style={[styles.headerText, styles.actionCell]}>Action</Text>
+            <Text style={[styles.headerText, { width: 90 }]}>Image</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>Name</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>Type</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>Brand</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>New Price</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>Old Price</Text>
+            <Text style={[styles.headerText, { width: 120 }]}>Action</Text>
+      
           </View>
 
           {/* VERTICAL SCROLL */}
@@ -150,6 +172,7 @@ const styles = StyleSheet.create({
     width: 140,
     color: '#fff',
     fontWeight: '700',
+    textAlign: 'left',
     fontSize: 13,
   },
 
@@ -167,6 +190,10 @@ const styles = StyleSheet.create({
 
   cell: {
     width: 140,
+    padding: 4,
+  },
+  
+  cellText: {
     fontSize: 13,
     color: '#2c3e50',
   },

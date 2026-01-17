@@ -4,7 +4,7 @@ import { AdminDashboard } from '../screens/Admin/AdminDashboard';
 import { AdminScholarships } from '../screens/Admin/AdminScholarships';
 import { AdminLoans } from '../screens/Admin/AdminLoans';
 import { AdminProducts } from '../screens/Admin/AdminProducts';
-import { AdminOrders } from '../screens/Admin/AdminOrders';
+import { AdminBanners } from '../screens/Admin/AdminBanners';
 import { AdminUsers } from '../screens/Admin/AdminUsers';
 import { AdminNotification } from '../screens/Admin/AdminNotification';
 import ApplicantDetail from '../screens/Admin/ScholaComp/ApplicantDetail';
@@ -24,7 +24,7 @@ export type AdminStackParamList = {
   AdminScholarships: undefined;
   AdminLoans: undefined;
   AdminProducts: undefined;
-  AdminOrders: undefined;
+  AdminBanners: undefined;
   AdminUsers: undefined;
   AdminNotification: undefined;
   ApplicantDetail: { id: string };
@@ -63,7 +63,7 @@ export const AdminStack = () => (
     <Stack.Screen name="AdminScholarships" component={AdminScholarships} />
     <Stack.Screen name="AdminLoans" component={AdminLoans} />
     <Stack.Screen name="AdminProducts" component={AdminProducts} />
-    <Stack.Screen name="AdminOrders" component={AdminOrders} />
+    <Stack.Screen name="AdminBanners" component={AdminBanners} />
     <Stack.Screen name="AdminUsers" component={AdminUsers} />
     <Stack.Screen name="AdminNotification" component={AdminNotification} />
     <Stack.Screen name="ApplicantDetail" component={ApplicantDetail} />

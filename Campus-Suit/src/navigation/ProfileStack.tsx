@@ -13,6 +13,7 @@ export type ProfileStackParamList = {
   Search: undefined;
   Notifications: undefined;
   SignIn: undefined;
+  Cart : undefined;
   SignUp: undefined;
   PasswordUpdate: undefined;
 };

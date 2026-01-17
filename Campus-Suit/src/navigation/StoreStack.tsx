@@ -10,7 +10,7 @@ import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
 
 export type StoreStackParamList = {
   StoreHome: undefined;
-  ProductDetail: { id: string };
+  ProductDetail: { productId: number};
   Cart: undefined;
   Checkout: undefined;
   OrderStatus: { id?: string } | undefined;

@@ -19,10 +19,13 @@ export const EditProduct = ({ route, navigation }: any) => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
   name: product.name,
+  productType: product.productType || '',
+  productBrand: product.productBrand || '',
   description: product.description || '',
   newPrice: String(product.newPrice),
   oldPrice: product.oldPrice ? String(product.oldPrice) : '',
 });
+
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -35,8 +38,16 @@ export const EditProduct = ({ route, navigation }: any) => {
       newErrors.name = 'Product name is required';
     }
 
-    if (!formData.description.trim()) {
-  newErrors.description = 'Product description is required';
+     if (!formData.productType.trim()) {
+      newErrors.productType = 'Product type is required';
+     }
+
+    if (!formData.productBrand.trim()) {
+          newErrors.productBrand = 'Product brand is required';
+       }
+
+     if (!formData.description.trim()) {
+           newErrors.description = 'Product description is required';
      }
 
     if (!formData.newPrice || isNaN(Number(formData.newPrice)) || Number(formData.newPrice) <= 0) {
@@ -77,12 +88,15 @@ export const EditProduct = ({ route, navigation }: any) => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-  name: formData.name.trim(),
-  description: formData.description.trim(),
-  newPrice: Number(formData.newPrice),
-  oldPrice: formData.oldPrice ? Number(formData.oldPrice) : null,
-  imageUrl: product.imageUrl,
-}),
+               name: formData.name.trim(),
+               productType: formData.productType.trim(),
+               productBrand: formData.productBrand.trim(),
+               description: formData.description.trim(),
+               newPrice: Number(formData.newPrice),
+               oldPrice: formData.oldPrice ? Number(formData.oldPrice) : null,
+               imageUrl: product.imageUrl,
+              }),
+
 
       });
 
@@ -138,6 +152,35 @@ export const EditProduct = ({ route, navigation }: any) => {
             />
             {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
+
+           <View style={styles.inputGroup}>
+             <Text style={styles.label}>Product Type</Text>
+         <TextInput
+              value={formData.productType}
+            onChangeText={(text) => handleChange('productType', text)}
+           style={[styles.input, errors.productType && styles.inputError]}
+           placeholder="e.g. Electronics, Books"
+           placeholderTextColor="#999"
+         />
+        {errors.productType && (
+             <Text style={styles.errorText}>{errors.productType}</Text>
+        )}
+        </View>
+
+          <View style={styles.inputGroup}>
+             <Text style={styles.label}>Product Brand</Text>
+        <TextInput
+            value={formData.productBrand}
+            onChangeText={(text) => handleChange('productBrand', text)}
+            style={[styles.input, errors.productBrand && styles.inputError]}
+           placeholder="e.g. Apple, Samsung"
+          placeholderTextColor="#999"
+          />
+  {errors.productBrand && (
+    <Text style={styles.errorText}>{errors.productBrand}</Text>
+  )}
+</View>
+
 
           <View style={styles.inputGroup}>
   <Text style={styles.label}>Product Description</Text>

@@ -12,14 +12,17 @@ export type RootStackParamList = {
   };
   AdminStack: undefined;
   AddProduct: undefined;
-  ProductDetail: { productId: number };  // Added ProductDetail screen type
-  EditProduct: { product: { 
-    productId: number; 
-    name: string; 
-    imageUrl: string; 
-    newPrice: number; 
-    oldPrice?: number 
-  }};
+  ProductDetail: { productId: number };
+  Cart: undefined;  // Added Cart screen to root stack
+  EditProduct: { 
+    product: { 
+      productId: number; 
+      name: string; 
+      imageUrl: string; 
+      newPrice: number; 
+      oldPrice?: number;
+    };
+  };
 };
 
 

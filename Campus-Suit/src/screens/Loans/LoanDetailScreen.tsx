@@ -17,7 +17,13 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
 import { Header, HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
+import { CommonActions } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../../navigation/MainStack';
+
+type LoanDetailScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Tabs'>;
 
 export type LoanDetailProps = NativeStackScreenProps<
   LoansStackParamList,
@@ -26,10 +32,7 @@ export type LoanDetailProps = NativeStackScreenProps<
 
 const { width } = Dimensions.get('window');
 
-const HERO_IMAGES = [
-  require('../../../assets/images/loan1.jpg'),
-  require('../../../assets/images/loan2.jpg'),
-];
+
 
 // 🔴 CHANGE TO YOUR SERVER IP
 const API_BASE = 'http://192.168.31.130:5000';
@@ -38,14 +41,18 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
   route,
   navigation,
 }) => {
+  const { user } = useAuth();
   const { id } = route.params;
 
   const [loan, setLoan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
+  const [heroImages, setHeroImages] = useState<any[]>([]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
   const heroScrollRef = useRef<ScrollView | null>(null);
+
+ 
+
 
   // =======================
   // FETCH LOAN FROM BACKEND
@@ -79,18 +86,39 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
   // =======================
   // HERO AUTO SLIDE
   // =======================
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const next = (heroIndex + 1) % HERO_IMAGES.length;
-      heroScrollRef.current?.scrollTo({
-        x: next * width,
-        animated: true,
-      });
-      setHeroIndex(next);
-    }, 4000);
+   useEffect(() => {
+  fetch('http://192.168.31.130:5000/api/banners?screen=LOAN_DETAIL&position=HERO')
+    .then(res => res.json())
+    .then(json => setHeroImages(json.data || []))
+    .catch(console.error);
+}, []);
 
-    return () => clearInterval(interval);
-  }, [heroIndex]);
+
+  const handleApplyLoan = () => {
+  if (!user) {
+    Alert.alert(
+      'Login Required',
+      'Please login to apply for this loan',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'OK',
+           onPress: () =>
+                   navigation.dispatch(
+                  CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
+              })
+           ),
+        },
+      ]
+    );
+    return;
+  }
+
+  // ✅ User is logged in
+  navigation.navigate('LoanApply', { id: loan.loanId });
+};
 
   // =======================
   // DOWNLOAD DOCUMENT
@@ -161,15 +189,16 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
           showsHorizontalScrollIndicator={false}
           style={styles.heroWrapper}
         >
-          {HERO_IMAGES.map((img, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setHeroModalVisible(true)}
-              style={[styles.heroCard, { width: width - 32 }]}
-            >
-              <Image source={img} style={styles.heroImage} />
-            </TouchableOpacity>
-          ))}
+          {heroImages.map((item, index) => (
+             <TouchableOpacity
+                key={item._id}
+                onPress={() => setHeroModalVisible(true)}
+                 style={[styles.heroCard, { width: width - 32 }]}
+               >
+               <Image source={{ uri: item.imageUrl }} style={styles.heroImage} />
+              </TouchableOpacity>
+            ))}
+
         </ScrollView>
 
         {/* SUMMARY CARD */}
@@ -214,11 +243,10 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
           <View style={{ height: 12 }} />
 
           <AppButton
-            label="Apply for this loan"
-            onPress={() =>
-              navigation.navigate('LoanApply', { id: loan.loanId })
-            }
-          />
+             label="Apply for this loan"
+                  onPress={handleApplyLoan}
+             />
+
         </View>
       </ScrollView>
 
@@ -229,7 +257,7 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
           onPress={() => setHeroModalVisible(false)}
         >
           <Image
-            source={HERO_IMAGES[heroIndex]}
+            source={{ uri: heroImages[heroIndex]?.imageUrl }}
             style={styles.modalImage}
             resizeMode="contain"
           />

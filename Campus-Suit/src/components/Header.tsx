@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 
 interface Props {
   title: string;
@@ -64,6 +65,7 @@ const styles = StyleSheet.create({
 export const HeaderTab: React.FC = () => {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
+  const { cart } = useCart();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const openMenu = () => setMenuOpen(true);
@@ -84,10 +86,6 @@ export const HeaderTab: React.FC = () => {
     closeMenu();
   };
 
-  const navigateToSettings = () => {
-    navigation.navigate('Profile' as never, { screen: 'Settings' } as never);
-    closeMenu();
-  };
 
   const handleLogout = () => {
     logout();
@@ -102,6 +100,10 @@ export const HeaderTab: React.FC = () => {
     navigation.navigate('Profile' as never, { screen: 'Notifications' } as never);
   };
 
+  const goToCart = () => {
+    navigation.navigate('Store' as never, { screen: 'Cart' } as never);
+  };
+
   return (
     <>
       <View style={headerTabStyles.container}>
@@ -109,8 +111,15 @@ export const HeaderTab: React.FC = () => {
           <Ionicons name="person-circle-outline" size={32} color={theme.colors.primary} />
         </TouchableOpacity>
         <View style={headerTabStyles.right}>
-          <TouchableOpacity onPress={goToSearch}>
-            <Ionicons name="search-outline" size={22} color={theme.colors.text} />
+          <TouchableOpacity onPress={goToCart} style={headerTabStyles.cartContainer}>
+            <Ionicons name="cart-outline" size={22} color={theme.colors.text} />
+            {cart.length > 0 && (
+              <View style={headerTabStyles.cartBadge}>
+                <Text style={headerTabStyles.cartBadgeText}>
+                  {cart.reduce((total, item) => total + item.quantity, 0)}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity onPress={goToNotifications}>
             <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
@@ -157,16 +166,7 @@ export const HeaderTab: React.FC = () => {
                 <Text style={headerTabStyles.menuItemText}>Profile</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={headerTabStyles.menuItem} onPress={navigateToSettings}>
-              <View style={headerTabStyles.menuItemRow}>
-                <Ionicons
-                  name="settings-outline"
-                  size={20}
-                  color={theme.colors.text}
-                />
-                <Text style={headerTabStyles.menuItemText}>Settings</Text>
-              </View>
-            </TouchableOpacity>
+            
             <View style={headerTabStyles.menuDivider} />
             <TouchableOpacity style={headerTabStyles.menuItem} onPress={handleLogout}>
               <View style={headerTabStyles.menuItemRow}>
@@ -186,6 +186,26 @@ export const HeaderTab: React.FC = () => {
 };
 
 const headerTabStyles = StyleSheet.create({
+  cartContainer: {
+    position: 'relative',
+    marginRight: 20,
+  },
+  cartBadge: {
+    position: 'absolute',
+    right: -8,
+    top: -5,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: { 
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',

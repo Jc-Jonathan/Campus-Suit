@@ -15,7 +15,7 @@ const loanApplySchema = new mongoose.Schema(
     phone: { type: String, required: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     studentId: { type: String },
-
+    homeAddress: { type: String, required: true }, // ✅ ADD THIS
     // Academic Information
     program: { type: String, required: true },
     yearOfStudy: { type: String, required: true },

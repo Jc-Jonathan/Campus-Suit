@@ -10,6 +10,7 @@ import {
 import { theme } from '../../theme/theme';
 import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
+import { router } from 'expo-router';
 
 export const PasswordUpdateScreen = () => {
   const [email, setEmail] = useState('');
@@ -19,50 +20,58 @@ export const PasswordUpdateScreen = () => {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleResetPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
+  if (!email) {
+    Alert.alert('Error', 'Please enter your email');
+    return;
+  }
 
-    if (!isValidEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email');
-      return;
-    }
+  if (!isValidEmail(email)) {
+    Alert.alert('Error', 'Please enter a valid email');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      await fetch('http://192.168.31.130:5000/api/auth/forgot-password', {
+  try {
+    const res = await fetch(
+      'http://192.168.31.130:5000/api/auth/forgot-password',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
-      });
+      }
+    );
 
-      Alert.alert(
-        'Check your email',
-        'A password reset link has been sent to your Gmail.',
-        [
-          {
-            text: 'Open Gmail',
-            onPress: () => Linking.openURL('mailto:'),
-          },
-          { text: 'OK' },
-        ]
-      );
+    if (!res.ok) throw new Error('Failed to send OTP');
 
-      setEmail('');
-    } catch {
-      Alert.alert('Error', 'Server not reachable');
-    } finally {
-      setLoading(false);
-    }
-  };
+    Alert.alert(
+      'Check your email',
+      'A 6-digit code has been sent to your email.',
+      [
+        {
+          text: 'OK',
+          onPress: () =>
+            router.push({
+              pathname: '/(auth)/verify-code',
+              params: { email }
+            }),
+        },
+      ]
+    );
+
+  } catch {
+    Alert.alert('Error', 'Server not reachable');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Reset Password</Text>
       <Text style={styles.subtitle}>
-        Enter your email and we’ll send you a link to reset your password.
+        Enter your email and we’ll send you an OTP to reset your password.
       </Text>
 
       <AppInput
@@ -74,7 +83,7 @@ export const PasswordUpdateScreen = () => {
       />
 
       <AppButton
-        label="Send Reset Link"
+        label="Send OTP"
         onPress={handleResetPassword}
         loading={loading}
       />

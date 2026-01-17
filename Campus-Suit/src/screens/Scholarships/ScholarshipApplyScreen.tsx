@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform, Modal, TextInput } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
 import { Header, HeaderTab } from '../../components/Header';
@@ -8,6 +8,10 @@ import { AppButton } from '../../components/AppButton';
 import { DocumentPickerButton } from '../../components/DocumentPickerButton';
 import { theme } from '../../theme/theme';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 export type ScholarshipApplyProps = NativeStackScreenProps<
   ScholarshipsStackParamList,
@@ -19,6 +23,67 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const [scholarshipTitle, setScholarshipTitle] = useState('');
   const [loadingScholarship, setLoadingScholarship] = useState(true);
 
+
+  // Get current location function
+  const getCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to get your current location');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+      
+      // Get address from coordinates
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode.length > 0) {
+        const { street, city, region, country, postalCode } = geocode[0];
+        const address = `${street ? street + ', ' : ''}${city ? city + ', ' : ''}${region ? region + ', ' : ''}${country || ''} ${postalCode || ''}`;
+        setAddressText(address);
+        setAddress(address);
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Could not get your current location');
+    }
+  };
+
+  // Handle map press to select location
+  const handleMapPress = async (e: any) => {
+    const newLocation = {
+      coords: {
+        latitude: e.nativeEvent.coordinate.latitude,
+        longitude: e.nativeEvent.coordinate.longitude,
+        altitude: null,
+        accuracy: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: Date.now(),
+    };
+    setLocation(newLocation);
+    
+    // Get address from coordinates
+    const geocode = await Location.reverseGeocodeAsync({
+      latitude: newLocation.coords.latitude,
+      longitude: newLocation.coords.longitude,
+    });
+
+    if (geocode.length > 0) {
+      const { street, city, region, country, postalCode } = geocode[0];
+      const address = `${street ? street + ', ' : ''}${city ? city + ', ' : ''}${region ? region + ', ' : ''}${country || ''} ${postalCode || ''}`;
+      setAddressText(address);
+    }
+  };
+
+  // Fetch scholarship details
   useEffect(() => {
     const fetchScholarship = async () => {
       try {
@@ -55,6 +120,17 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const [email, setEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
   const [address, setAddress] = useState('');
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [addressText, setAddressText] = useState('');
+  const { user } = useAuth();
+  
+  // Auto-fill email if user is logged in
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user]);
 
   // Academic information
   const [studentId, setStudentId] = useState('');
@@ -358,13 +434,14 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
         <View style={styles.inputContainer}>
           <AppInput
             label="Email address"
-            value={email}
+            value={user?.email || email}
             keyboardType="email-address"
             placeholder='Enter your email'
             autoCapitalize="none"
             autoCorrect={false}
             onChangeText={handleEmailChange}
             onBlur={handleEmailBlur}
+            editable={!user?.email} // Make field read-only if user is logged in
           />
           {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         </View>
@@ -382,12 +459,26 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
             placeholderTextColor={theme.colors.textMuted}
           />
         </View>
-        <AppInput
-          label="Home address"
-          value={address}
-          multiline
-          onChangeText={setAddress}
-        />
+        <View style={styles.addressContainer}>
+          <View style={styles.addressInputWrapper}>
+            <AppInput
+              label="Home address"
+              value={address}
+              multiline
+              onChangeText={setAddress}
+              style={{ width: '100%' }}
+            />
+          </View>
+          <TouchableOpacity 
+            style={styles.locationButton}
+            onPress={() => {
+              setLocationModalVisible(true);
+              getCurrentLocation();
+            }}
+          >
+            <Ionicons name="location" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
 
         {/* Academic Information */}
         <Text style={styles.sectionTitle}>Academic Information</Text>
@@ -523,6 +614,75 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
           </View>
         </View>
       </Modal>
+
+      {/* Location Picker Modal */}
+      <Modal
+        visible={locationModalVisible}
+        animationType="slide"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Your Location</Text>
+            <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
+              <Ionicons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.mapContainer}>
+            {location ? (
+              <MapView
+                style={styles.map}
+                initialRegion={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  latitudeDelta: 0.0922,
+                  longitudeDelta: 0.0421,
+                }}
+                onPress={handleMapPress}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  }}
+                  title="Your Location"
+                />
+              </MapView>
+            ) : (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Loading map...</Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.addressPreview}>
+            <Text style={styles.addressLabel}>Selected Address:</Text>
+            <Text style={styles.addressText} numberOfLines={2}>
+              {addressText || 'No address selected'}
+            </Text>
+          </View>
+          
+          <View style={styles.modalButtons}>
+            <AppButton
+              label="Use Current Location"
+              onPress={getCurrentLocation}
+              variant="outline"
+              // Remove icon prop as it's not supported by AppButton
+              style={styles.locationIconButton}
+            />
+            <AppButton
+              label="Confirm Location"
+              onPress={() => {
+                setAddress(addressText);
+                setLocationModalVisible(false);
+              }}
+              disabled={!location}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -530,8 +690,88 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
-  inputContainer: {
+  // Location picker styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  locationButton: {
+    marginTop: 20,
+    padding: 10,
+    marginLeft: 10,
+    borderRadius: 5,
+    backgroundColor: theme.colors.surface,
+  },
+inputContainer: {
+  marginBottom: theme.spacing.md, // or whatever spacing you prefer
+  width: '200%',
+},
+  mapContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+  },
+  loadingText: {
+    marginTop: theme.spacing.sm,
+    color: theme.colors.textMuted,
+  },
+  addressPreview: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  addressLabel: {
+    fontWeight: '500',
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.textMuted,
+  },
+  addressText: {
+    color: theme.colors.text,
+    fontSize: 16,
+  },
+  modalButtons: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+  },
+  addressContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: theme.spacing.sm,
+    width: '100%',
+  },
+  addressInputWrapper: {
+    flex: 1,
+    marginRight: 10,
+  },
+  locationIconButton: {
+    marginLeft: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surface,
   },
   errorText: {
     fontSize: 12,
