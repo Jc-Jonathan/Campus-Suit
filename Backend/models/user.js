@@ -22,4 +22,5 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('User', UserSchema);
+// Check if the model has already been defined
+module.exports = mongoose.models.User || mongoose.model('User', UserSchema);

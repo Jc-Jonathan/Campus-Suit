@@ -72,7 +72,6 @@ export const ScholarshipListScreen: React.FC = () => {
     <View style={styles.container}>
       <HeaderTab />
       <Header title="Scholarships" subtitle="Find opportunities that fit you" />
-
       <FlatList
         contentContainerStyle={styles.list}
         data={scholarships}

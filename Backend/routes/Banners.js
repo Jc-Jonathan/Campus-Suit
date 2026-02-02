@@ -21,6 +21,19 @@ router.post('/', async (req, res) => {
         message: 'Missing required fields: imageUrl, screen, and position are required'
       });
     }
+     // CHECK IF BANNER ALREADY EXISTS
+         const existingBanner = await Banner.findOne({
+          screen: screen.toUpperCase(),
+           position: position.toUpperCase(),
+            });
+
+        if (existingBanner) {
+          return res.status(409).json({
+             success: false,
+           message:
+      'Banner already exists for this screen and position. Please delete it first.',
+        });
+}
 
     // Create banner using the model
     const banner = new Banner({
@@ -50,9 +63,13 @@ router.post('/', async (req, res) => {
 // GET /api/banners
 router.get('/', async (req, res) => {
   try {
-    const { screen, position } = req.query;
-    const query = { isActive: true };
-    
+    const { screen, position, admin } = req.query;
+
+    const query = {};
+
+    // Only filter active banners for user app
+    if (!admin) query.isActive = true;
+
     if (screen) query.screen = screen.toUpperCase();
     if (position) query.position = position.toUpperCase();
 
@@ -62,16 +79,69 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: banners.length,
-      data: banners
+      data: banners,
     });
   } catch (err) {
-    console.error('Error fetching banners:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Failed to fetch banners',
-      error: err.message
+      error: err.message,
     });
   }
 });
+
+
+// PUT /api/banners/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const updateData = {
+      ...req.body,
+      screen: req.body.screen?.toUpperCase(),
+      position: req.body.position?.toUpperCase(),
+      priority: Number(req.body.priority),
+      isActive: req.body.isActive !== false,
+    };
+
+    const banner = await Banner.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!banner) {
+      return res.status(404).json({ success: false, message: 'Banner not found' });
+    }
+
+    res.json({ success: true, data: banner });
+  } catch (err) {
+    console.error('Update error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update banner',
+      error: err.message,
+    });
+  }
+});
+
+
+// DELETE /api/banners/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const banner = await Banner.findByIdAndDelete(req.params.id);
+
+    if (!banner) {
+      return res.status(404).json({ success: false, message: 'Banner not found' });
+    }
+
+    res.json({ success: true, message: 'Banner deleted successfully' });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete banner',
+      error: err.message,
+    });
+  }
+});
+
 
 module.exports = router;

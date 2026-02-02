@@ -49,8 +49,8 @@ app.use('/api/loanApplys', require('./routes/LoanApplys'));
 app.use('/api/products', require('./routes/Products'));
 app.use('/api/orders', require('./routes/Orders'));
 app.use('/api/Banners', require('./routes/Banners'));
-
-
+app.use('/api/notifications', require('./routes/Notifications'));
+app.use('/api/upload', require('./routes/upload'));
 /* 🔹 Serve uploaded files */
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
@@ -59,6 +59,7 @@ console.log('Serving static files from:', path.join(__dirname, 'public', 'upload
 
 /* 🔹 Server */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT,() => {
   console.log(`Server running on port ${PORT}`);
 });
+

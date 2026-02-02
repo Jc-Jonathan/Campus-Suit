@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Alert, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { AuthStackParamList } from '../../navigation/AuthStack';
+import { router } from 'expo-router';
 import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { theme } from '../../theme/theme';
-
-type VerifyCodeScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'VerifyCode'>;
+import type { MainStackParamList } from '../../navigation/MainStack';
+import { CommonActions } from '@react-navigation/native';
 
 export const VerifyCodeScreen = ({ route }: any) => {
-  const navigation = useNavigation<VerifyCodeScreenNavigationProp>();
   const { email } = route.params;
 
   const [code, setCode] = useState('');
@@ -42,7 +39,7 @@ export const VerifyCodeScreen = ({ route }: any) => {
       if (!res.ok) throw new Error(data.message);
 
       Alert.alert('Success', 'Password reset successful');
-navigation.navigate('SignIn');
+      router.replace('/');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Invalid code');
     } finally {

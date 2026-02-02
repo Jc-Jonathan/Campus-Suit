@@ -1,132 +1,155 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, BackHandler, ScrollView } from 'react-native';
-import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
-import { CompositeNavigationProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppButton } from '../../components/AppButton';
+import {
+  View,
+  Text,
+  StyleSheet,
+  BackHandler,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { AdminStackParamList } from '../../navigation/AdminStack';
 import { RootStackParamList } from '../../types/navigation';
-import { useAuth } from '../../contexts/AuthContext';
-import { TabsFlow } from '../../navigation/TabsFlow';
 
-type AdminScreenNavigationProp = CompositeNavigationProp<
-  NativeStackNavigationProp<AdminStackParamList, 'AdminDashboard'>,
-  NativeStackNavigationProp<RootStackParamList>
->;
+type AdminScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList, 'AdminDashboard'>;
 
-export const AdminDashboard: React.FC = () => {
+type AdminDashboardRouteProp = RouteProp<AdminStackParamList, 'AdminDashboard'>;
+
+type DashboardRouteParams = {
+  userToken: string;
+};
+
+const AdminDashboard = () => {
   const navigation = useNavigation<AdminScreenNavigationProp>();
+  const route = useRoute<AdminDashboardRouteProp>();
 
   useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      // Navigate to the Tabs screen which is the parent of the Admin stack
-      navigation.navigate('Tabs' as never);
-      return true; // Prevent default back behavior
-    };
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate('Tabs' as never);
+        return true;
+      };
 
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      onBackPress
-    );
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
 
-    return () => subscription.remove();
-  }, [navigation])
-);
+      return () => subscription.remove();
+    }, [navigation])
+  );
 
-
-  const goToLoans = () => navigation.navigate('AdminLoans');
-  const goToOrders = () => navigation.navigate('AdminBanners');
-  const goToProducts = () => navigation.navigate('AdminProducts');
-  const goToScholarships = () => navigation.navigate('AdminScholarships');
-  const goToUsers = () => navigation.navigate('AdminUsers');
-  const goToNotification = () => navigation.navigate('AdminNotification');
-
-  const auth = useAuth();
-
+  const cards = [
+    { label: 'Loans', icon: 'cash-outline', onPress: () => navigation.navigate('AdminLoans') },
+    { label: 'Banners', icon: 'images-outline', onPress: () => navigation.navigate('AdminBanners') },
+    { label: 'Products', icon: 'cube-outline', onPress: () => navigation.navigate('AdminProducts') },
+    { label: 'Scholarships', icon: 'school-outline', onPress: () => navigation.navigate('AdminScholarships') },
+    { label: 'Users', icon: 'people-outline', onPress: () => navigation.navigate('AdminUsers') },
+    { 
+      label: 'Notifications', 
+      icon: 'notifications-outline', 
+      onPress: () => navigation.navigate('AdminNotification', { userToken: route.params?.userToken || '' }) 
+    },
+  ];
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* HEADER */}
+      <View style={styles.headerCard}>
         <Text style={styles.title}>Admin Dashboard</Text>
-        <Text style={styles.subtitle}>Quick access to admin sections</Text>
+        <Text style={styles.subtitle}>
+          Manage application content and users
+        </Text>
+      </View>
 
-        <View style={styles.grid}>
-          <View style={styles.row}>
-            <View style={styles.cell}>
-              <AppButton label="Loan" onPress={goToLoans} />
-            </View>
-            <View style={styles.cell}>
-              <AppButton label="Add Banners" onPress={goToOrders} />
-            </View>
-          </View>
-          <View style={styles.row}>
-            <View style={styles.cell}>
-              <AppButton label="Products" onPress={goToProducts} />
-            </View>
-            <View style={styles.cell}>
-              <AppButton label="Scholarship" onPress={goToScholarships} />
-            </View>
-          </View>
-          <View style={styles.row}>
-            <View style={styles.cell}>
-              <AppButton label="Users" onPress={goToUsers} />
-            </View>
-            <View style={styles.cell}>
-              <AppButton label="Notifications" onPress={goToNotification} />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+      {/* GRID */}
+      <View style={styles.grid}>
+        {cards.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={item.onPress}
+          >
+            <Ionicons
+              name={item.icon as any}
+              size={28}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.cardText}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
   );
 };
 
+export default AdminDashboard;
 
+// =========================
+// STYLES
+// =========================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+  content: {
+    padding: 16,
+    paddingBottom: 40,
   },
+
+  headerCard: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+
   title: {
-    fontSize: theme.typography.title,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
   },
+
   subtitle: {
-    color: theme.colors.textMuted,
-    marginBottom: theme.spacing.lg,
+    color: '#eaeaea',
+    fontSize: 14,
   },
+
   grid: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
-    gap: theme.spacing.md,
-  },
-  row: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  cell: {
-    flex: 1,
+
+  card: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+
+    // Shadow (Android + iOS)
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
-  exitButtonContainer: {
-    marginTop: 'auto',
-    paddingTop: theme.spacing.xl,
-    width: '100%',
-  },
-  exitButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'red',
-  },
-  exitButtonText: {
-    color: 'red',
+
+  cardText: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
   },
 });

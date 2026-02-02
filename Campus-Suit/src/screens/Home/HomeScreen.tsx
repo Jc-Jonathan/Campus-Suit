@@ -1,41 +1,54 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Image, TouchableOpacity, Modal, Pressable, BackHandler, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Image,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  BackHandler,
+  Alert,
+} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderTab } from '../../components/Header';
 import { theme } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
+
 const CARDS = [
   {
     key: 'loan',
     title: 'Easy Campus Loans',
-    short: 'Quick access to student-friendly loans.',
+    short: 'Student-friendly loan solutions',
     description:
-      'Get flexible loan options designed for students. Compare offers, check eligibility instantly, and track your applications in one place.',
+      'Get flexible loan options designed for students. Compare offers, check eligibility instantly, and track applications in one place.',
   },
   {
     key: 'scholarship',
     title: 'Scholarship Opportunities',
-    short: 'Discover scholarships that match you.',
+    short: 'Scholarships made for you',
     description:
-      'Browse curated scholarships based on your profile, eligibility, and interests. Save opportunities and apply directly from the app.',
+      'Browse curated scholarships based on your profile. Save opportunities and apply directly from the app.',
   },
   {
     key: 'store',
     title: 'Campus Store Deals',
-    short: 'Best deals on books, gadgets, and more.',
+    short: 'Best campus essentials',
     description:
-      'Explore exclusive discounts on textbooks, gadgets, and campus essentials. Order online and track your purchases easily.',
-  }
+      'Exclusive discounts on textbooks, gadgets, and essentials. Order online and track purchases easily.',
+  },
 ];
-
-
 
 const BUTTON_LABELS: Record<string, string> = {
   loan: 'Get a loan quote',
   scholarship: 'Find scholarships',
-  store: 'Browse store deals',
+  store: 'Browse store',
 };
 
 export const HomeScreen: React.FC = () => {
@@ -44,106 +57,57 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [homeBanners, setHomeBanners] = useState<any[]>([]);
-  
-  useEffect(() => {
-  fetch('http://192.168.31.130:5000/api/banners?screen=HOME&position=CAROUSEL')
-    .then(res => res.json())
-    .then(json => setHomeBanners(json.data || []))
-    .catch(console.error);
-}, []);
 
+  useEffect(() => {
+    fetch('http://192.168.31.130:5000/api/banners?screen=HOME&position=CAROUSEL')
+      .then(res => res.json())
+      .then(json => setHomeBanners(json.data || []))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const nextIndex = (activeIndex + 1) % CARDS.length;
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({ x: nextIndex * width, animated: true });
-      }
+      scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
       setActiveIndex(nextIndex);
-    }, 4000);
+    }, 4500);
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      // Handle back button press if needed
-      return false; // Return false to let the default back button behavior
-    });
-
-    return () => {
-      clearInterval(interval);
-      backHandler.remove(); // Proper way to remove the event listener
-    };
+    return () => clearInterval(interval);
   }, [activeIndex]);
 
   useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      Alert.alert(
-        'Exit App',
-        'Are you sure you want to exit?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Yes',
-            onPress: () => BackHandler.exitApp(),
-          },
-        ],
-        { cancelable: true }
-      );
+    useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert('Exit App', 'Are you sure you want to exit?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Yes', onPress: () => BackHandler.exitApp() },
+        ]);
+        return true;
+      };
 
-      return true; // ⛔ stop default back behavior
-    };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [])
+  );
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-    return () => subscription.remove();
-  }, [])
-);
-
-
-  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offsetX / width);
-    if (newIndex !== activeIndex) {
-      setActiveIndex(newIndex);
-    }
-  };
-
-  const openImageModal = () => {
-    setImageModalVisible(true);
-  };
-
-  const closeImageModal = () => {
-    setImageModalVisible(false);
+  const handleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / width));
   };
 
   const activeCard = CARDS[activeIndex];
 
   const handleCtaPress = () => {
-    switch (activeCard.key) {
-      case 'loan':
-        navigation.navigate('Finance' as never);
-        break;
-      case 'scholarship':
-        navigation.navigate('HomeScholarships' as never);
-        break;
-      case 'store':
-        navigation.navigate('Store' as never);
-        break;
-      default:
-        break;
-    }
+    if (activeCard.key === 'loan') navigation.navigate('Finance');
+    if (activeCard.key === 'scholarship') navigation.navigate('HomeScholarships');
+    if (activeCard.key === 'store') navigation.navigate('Store');
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <HeaderTab />
-      <View style={styles.carouselContainer}>
+
+      {/* HERO CAROUSEL */}
+      <View style={styles.carouselWrapper}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -152,68 +116,57 @@ export const HomeScreen: React.FC = () => {
           onMomentumScrollEnd={handleScrollEnd}
         >
           {CARDS.map(card => (
-            <View key={card.key} style={[styles.card, { width }]}>                
-              <Text style={styles.cardTitle}>{card.title}</Text>
-              <Text style={styles.cardShort}>{card.short}</Text>
+            <View key={card.key} style={[styles.heroCard, { width }]}>
+              <Text style={styles.heroTitle}>{card.title}</Text>
+              <Text style={styles.heroSubtitle}>{card.short}</Text>
             </View>
           ))}
         </ScrollView>
-        <View style={styles.dotsContainer}>
-          {CARDS.map((card, index) => (
-            <View
-              key={card.key}
-              style={[
-                styles.dot,
-                index === activeIndex && styles.dotActive,
-              ]}
-            />
+
+        <View style={styles.dots}>
+          {CARDS.map((_, i) => (
+            <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
           ))}
         </View>
       </View>
 
-      <View style={styles.detailsContainer}>
-        <Text style={styles.detailsTitle}>{activeCard.title}</Text>
-        <Text style={styles.detailsDescription}>{activeCard.description}</Text>
+      {/* CONTENT */}
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>{activeCard.title}</Text>
+        <Text style={styles.sectionDescription}>{activeCard.description}</Text>
 
-        <View style={styles.imageCardContainer}>
-          <TouchableOpacity activeOpacity={0.9} onPress={openImageModal}>
-            <Image
-               source={{ uri: homeBanners[activeIndex]?.imageUrl }}
-               resizeMode="cover"
-              style={styles.imageCard}
-               />
+        {/* BANNER */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.bannerCard}
+          onPress={() => setImageModalVisible(true)}
+        >
+          <Image
+            source={{ uri: homeBanners[activeIndex]?.imageUrl }}
+            style={styles.bannerImage}
+          />
 
-            
-            <View style={styles.imageOverlay}>
-              <Text style={styles.imageTitle}>{activeCard.title}</Text>
-              <View style={styles.imageButtonWrapper}>
-                <TouchableOpacity
-                  style={styles.ctaButton}
-                  activeOpacity={0.85}
-                  onPress={handleCtaPress}
-                >
-                  <Text style={styles.ctaButtonLabel}>{BUTTON_LABELS[activeCard.key]}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <Modal
-        visible={imageModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeImageModal}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={closeImageModal}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              activeOpacity={0.8}
-              onPress={closeImageModal}
-            >
-              <Ionicons name="close" size={24} color="#fff" />
+          <View style={styles.bannerOverlay}>
+            <Text style={styles.bannerText}>{activeCard.title}</Text>
+
+            <TouchableOpacity style={styles.ctaButton} onPress={handleCtaPress}>
+              <Text style={styles.ctaText}>{BUTTON_LABELS[activeCard.key]}</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* IMAGE MODAL */}
+      <Modal visible={imageModalVisible} transparent animationType="fade">
+        <Pressable style={styles.modalBackdrop} onPress={() => setImageModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <Ionicons
+              name="close"
+              size={28}
+              color="#fff"
+              style={styles.modalClose}
+            />
             <Image
               source={{ uri: homeBanners[activeIndex]?.imageUrl }}
               style={styles.modalImage}
@@ -231,122 +184,129 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  carouselContainer: {
-    height: 200,
+
+  carouselWrapper: {
+    height: 220,
   },
-  card: {
-    flex: 1,
+
+  heroCard: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
     backgroundColor: theme.colors.primary,
   },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 8,
   },
-  cardShort: {
+
+  heroSubtitle: {
+    marginTop: 8,
     fontSize: 14,
-    color: '#f5f5f5',
+    color: '#eaeaea',
     textAlign: 'center',
   },
-  dotsContainer: {
+
+  dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
+
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: '#fff',
+    opacity: 0.4,
     marginHorizontal: 4,
-    backgroundColor: theme.colors.surface,
-    opacity: 0.5,
   },
+
   dotActive: {
-    backgroundColor: theme.colors.primary,
     opacity: 1,
   },
-  detailsContainer: {
-    flex: 1,
+
+  content: {
     padding: 24,
   },
-  detailsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
+
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: theme.colors.text,
   },
-  detailsDescription: {
+
+  sectionDescription: {
+    marginTop: 10,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
     color: theme.colors.textMuted,
   },
-  imageCardContainer: {
-    marginTop: 24,
-    borderRadius: 16,
+
+  bannerCard: {
+    marginTop: 28,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.card,
+    backgroundColor: '#fff',
+    elevation: 4,
   },
-  imageCard: {
+
+  bannerImage: {
+    height: 200,
     width: '100%',
-    height: 180,
   },
-  imageOverlay: {
+
+  bannerOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    padding: 20,
     justifyContent: 'flex-end',
   },
-  imageTitle: {
+
+  bannerText: {
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  imageButtonWrapper: {
+
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignSelf: 'flex-start',
   },
-  ctaButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    backgroundColor:  theme.colors.primary,
-  },
-  ctaButtonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+
+  ctaText: {
     color: '#fff',
+    fontWeight: '600',
   },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.9)',
     justifyContent: 'center',
-    alignItems: 'center',
   },
+
   modalContent: {
-    width: '90%',
-    height: '70%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: '80%',
   },
-  modalCloseButton: {
+
+  modalClose: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 4,
+    top: 40,
+    right: 20,
+    zIndex: 2,
   },
+
   modalImage: {
     width: '100%',
     height: '100%',

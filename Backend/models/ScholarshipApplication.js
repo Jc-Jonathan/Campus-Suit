@@ -35,6 +35,17 @@ const ScholarshipApplicationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    //User
+     user: {
+   type: mongoose.Schema.Types.ObjectId,
+   ref: 'User',
+     },
+
+     approvedUser: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+     },
+
 
     // Application status
     status: {

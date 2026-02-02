@@ -20,6 +20,7 @@ interface ApiResponse {
   email?: string;
   role?: string;
   message?: string;
+  token?: string;
 }
 
 export const SignInScreen = () => {
@@ -81,6 +82,7 @@ export const SignInScreen = () => {
       let data: ApiResponse = {};
       try {
         data = await response.json();
+        console.log('Login response:', data); // Add logging to debug
       } catch {
         data = { message: 'Invalid server response' };
       }
@@ -96,7 +98,15 @@ export const SignInScreen = () => {
         return;
       }
 
-      await loginAsStudent(data.userId, data.email!);
+      if (!data.token) {
+        Alert.alert('Error', 'Authentication token not received');
+        return;
+      }
+
+      // The backend returns userId, email, and token
+      // We'll use userId as a string for mongoId since the actual _id isn't returned
+      // Consider updating the backend to return the _id field for better security
+      await loginAsStudent(data.userId.toString(), data.userId, data.email!, data.token!);
       setPassword('');
 
       // Navigate to the Profile tab after successful login
@@ -105,7 +115,7 @@ export const SignInScreen = () => {
         routes: [{ name: 'Tabs', params: { screen: 'Profile' } }],
       });
     } catch {
-      Alert.alert('Error', 'Server not reachable');
+      Alert.alert('Error', 'Server not reachable. Please check your connection and try again.');
       setPassword('');
     } finally {
       setUserLoading(false);
@@ -154,7 +164,11 @@ export const SignInScreen = () => {
       {
         text: 'OK',
         onPress: async () => {
-          await loginAsAdmin(email);
+          if (!data.token) {
+            Alert.alert('Error', 'No authentication token received');
+            return;
+          }
+          await loginAsAdmin(email, data.token);
           // Navigate to the admin dashboard
           navigation.reset({
             index: 0,

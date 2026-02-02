@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { uploadImage } from '../../utils/uploadImage';
 const API_BASE = 'http://192.168.31.130:5000';
 
 export const AdminBanners: React.FC = () => {
+  const scrollRef = useRef<ScrollView>(null);
+
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [screen, setScreen] = useState('HOME');
   const [position, setPosition] = useState('CAROUSEL');
@@ -26,31 +28,63 @@ export const AdminBanners: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const [banners, setBanners] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // =========================
-  // PICK & UPLOAD IMAGE
+  // FETCH BANNERS
+  // =========================
+  const fetchBanners = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/banners?admin=true`);
+      const json = await res.json();
+      setBanners(json.data || []);
+    } catch {
+      Alert.alert('Error', 'Failed to load banners');
+    }
+  };
+
+  useEffect(() => {
+    fetchBanners();
+  }, []);
+
+  // =========================
+  // IMAGE PICK & UPLOAD
   // =========================
   const pickImage = async () => {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.8,
       });
 
-      if (!res.canceled && res.assets[0]?.uri) {
+      if (!result.canceled && result.assets[0]?.uri) {
         setLoading(true);
-        const url = await uploadImage(res.assets[0].uri);
+        const url = await uploadImage(result.assets[0].uri);
         setImageUrl(url);
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to upload image');
+    } catch {
+      Alert.alert('Error', 'Image upload failed');
     } finally {
       setLoading(false);
     }
   };
 
   // =========================
-  // SAVE BANNER
+  // FRONTEND DUPLICATE CHECK
+  // =========================
+  const bannerExists = () => {
+    return banners.some(
+      (b) =>
+        b.screen === screen &&
+        b.position === position &&
+        b._id !== editingId
+    );
+  };
+
+  // =========================
+  // SAVE / UPDATE BANNER
   // =========================
   const saveBanner = async () => {
     if (!imageUrl) {
@@ -58,11 +92,26 @@ export const AdminBanners: React.FC = () => {
       return;
     }
 
+    // 🚫 FRONTEND DUPLICATE GUARD
+    if (!editingId && bannerExists()) {
+      Alert.alert(
+        'Banner Exists',
+        'A banner already exists for this screen and position.\nPlease delete it first.'
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/api/banners`, {
-        method: 'POST',
+      const url = editingId
+        ? `${API_BASE}/api/banners/${editingId}`
+        : `${API_BASE}/api/banners`;
+
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageUrl,
@@ -73,37 +122,88 @@ export const AdminBanners: React.FC = () => {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const text = await res.text();
-        console.error(text);
-        throw new Error('Failed to save banner');
+        Alert.alert('Error', data.message || 'Failed to save banner');
+        return;
       }
 
-      Alert.alert('Success', 'Banner added successfully');
-
-      // RESET FORM
-      setImageUrl(null);
-      setPriority('1');
-      setIsActive(true);
-      setScreen('HOME');
-      setPosition('CAROUSEL');
-    } catch (err) {
-      Alert.alert('Error', 'Could not save banner');
+      Alert.alert('Success', editingId ? 'Banner updated' : 'Banner added');
+      resetForm();
+      fetchBanners();
+    } catch {
+      Alert.alert('Error', 'Failed to save banner');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Add Banner</Text>
+  // =========================
+  // EDIT BANNER
+  // =========================
+  const editBanner = (banner: any) => {
+    setEditingId(banner._id);
+    setImageUrl(banner.imageUrl);
+    setScreen(banner.screen);
+    setPosition(banner.position);
+    setPriority(String(banner.priority));
+    setIsActive(banner.isActive);
 
-      {/* IMAGE UPLOAD */}
+    // 🔥 GUARANTEED SCROLL AFTER RENDER
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  };
+
+  // =========================
+  // DELETE BANNER
+  // =========================
+  const deleteBanner = (id: string) => {
+    Alert.alert('Confirm', 'Delete this banner?', [
+      { text: 'Cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+              method: 'DELETE',
+            });
+
+            if (!res.ok) throw new Error();
+
+            Alert.alert('Deleted', 'Banner deleted');
+            fetchBanners();
+          } catch {
+            Alert.alert('Error', 'Delete failed');
+          }
+        },
+      },
+    ]);
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setImageUrl(null);
+    setScreen('HOME');
+    setPosition('CAROUSEL');
+    setPriority('1');
+    setIsActive(true);
+  };
+
+  return (
+    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>
+        {editingId ? 'Edit Banner' : 'Add Banner'}
+      </Text>
+
+      {/* IMAGE */}
       <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.image} />
         ) : (
-          <Text style={styles.imageText}>Tap to upload banner image</Text>
+          <Text style={styles.imageText}>Tap to upload banner</Text>
         )}
       </TouchableOpacity>
 
@@ -111,7 +211,7 @@ export const AdminBanners: React.FC = () => {
 
       {/* SCREEN */}
       <Text style={styles.label}>Screen</Text>
-      <Picker selectedValue={screen} onValueChange={setScreen}>
+      <Picker selectedValue={screen} enabled={!editingId} onValueChange={setScreen}>
         <Picker.Item label="Home" value="HOME" />
         <Picker.Item label="Loan Detail" value="LOAN_DETAIL" />
         <Picker.Item label="Checkout" value="CHECKOUT" />
@@ -119,19 +219,20 @@ export const AdminBanners: React.FC = () => {
 
       {/* POSITION */}
       <Text style={styles.label}>Position</Text>
-      <Picker selectedValue={position} onValueChange={setPosition}>
-        <Picker.Item label="Home Carousel" value="CAROUSEL" />
-        <Picker.Item label="Loan Hero" value="HERO" />
-        <Picker.Item label="Checkout QR" value="QR_PAYMENT" />
+      <Picker selectedValue={position} enabled={!editingId} onValueChange={setPosition}>
+        <Picker.Item label="Carousel" value="CAROUSEL" />
+        <Picker.Item label="Hero" value="HERO" />
+        <Picker.Item label="QR Payment" value="QR_PAYMENT" />
       </Picker>
 
       {/* PRIORITY */}
-      <Text style={styles.label}>Priority (Lower shows first)</Text>
+      <Text style={styles.label}>Priority</Text>
       <TextInput
-        value={priority}
-        onChangeText={setPriority}
-        keyboardType="number-pad"
         style={styles.input}
+        value={priority}
+        placeholder="1 is for Loan , 2 is for scholarship and 3 for products"
+        keyboardType="number-pad"
+        onChangeText={setPriority}
       />
 
       {/* ACTIVE */}
@@ -140,16 +241,37 @@ export const AdminBanners: React.FC = () => {
         <Switch value={isActive} onValueChange={setIsActive} />
       </View>
 
-      {/* SAVE BUTTON */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={saveBanner}
-        disabled={loading}
-      >
+      {/* SAVE */}
+      <TouchableOpacity style={styles.saveButton} onPress={saveBanner} disabled={loading}>
         <Text style={styles.saveText}>
-          {loading ? 'Saving...' : 'Save Banner'}
+          {editingId ? 'Update Banner' : 'Save Banner'}
         </Text>
       </TouchableOpacity>
+
+      {/* LIST */}
+      <Text style={[styles.title, { marginTop: 30 }]}>Available Banners</Text>
+
+      {banners.map((banner) => (
+        <View key={banner._id} style={styles.bannerCard}>
+          <Image source={{ uri: banner.imageUrl }} style={styles.bannerImage} />
+          <Text>Screen: {banner.screen}</Text>
+          <Text>Position: {banner.position}</Text>
+          <Text>Status: {banner.isActive ? 'Active' : 'Inactive'}</Text>
+
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.editBtn} onPress={() => editBanner(banner)}>
+              <Text>Edit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={() => deleteBanner(banner._id)}
+            >
+              <Text style={{ color: '#fff' }}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
     </ScrollView>
   );
 };
@@ -158,48 +280,24 @@ export const AdminBanners: React.FC = () => {
 // STYLES
 // =========================
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 16,
-    color: theme.colors.text,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  content: { padding: 16, paddingBottom: 40 },
+  title: { fontSize: 22, fontWeight: '800', marginBottom: 16 },
   imageBox: {
     height: 180,
     borderRadius: 14,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     overflow: 'hidden',
   },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imageText: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  label: {
-    marginTop: 12,
-    marginBottom: 6,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
+  image: { width: '100%', height: '100%' },
+  imageText: { fontWeight: '600' },
+  label: { marginTop: 12, marginBottom: 6, fontWeight: '600' },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 10,
     backgroundColor: '#fff',
@@ -215,11 +313,33 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+  },
+  saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  bannerCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    elevation: 2,
+  },
+  bannerImage: {
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 10,
   },
-  saveText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+  editBtn: {
+    padding: 10,
+    backgroundColor: '#eee',
+    borderRadius: 8,
+  },
+  deleteBtn: {
+    padding: 10,
+    backgroundColor: 'red',
+    borderRadius: 8,
   },
 });

@@ -5,7 +5,7 @@ import { ScholarshipDetailScreen } from '../screens/Scholarships/ScholarshipDeta
 import { ScholarshipApplyScreen } from '../screens/Scholarships/ScholarshipApplyScreen';
 import { ScholarshipStatusScreen } from '../screens/Scholarships/ScholarshipStatusScreen';
 import { SearchScreen } from '../screens/Common/SearchScreen';
-import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
+import NotificationScreen from '../screens/Common/NotificationsScreen';
 import Applicant from '../screens/Admin/ScholaComp/Applicant';
 import ApplicantDetail from '../screens/Admin/ScholaComp/ApplicantDetail';
 import Admission from '../screens/Admin/ScholaComp/Admission';
@@ -34,7 +34,7 @@ export const ScholarshipsStack = () => (
     <Stack.Screen name="ScholarshipApply" component={ScholarshipApplyScreen} />
     <Stack.Screen name="ScholarshipStatus" component={ScholarshipStatusScreen} />
     <Stack.Screen name="Search" component={SearchScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen name="Notifications" component={NotificationScreen} />
     <Stack.Screen 
       name="Applicants" 
       component={Applicant} 

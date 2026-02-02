@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const sendEmail = require('../utils/sendEmail'); // adjust path if needed
+const sendEmail = require('../utils/sendEmail');
 
 /* ===================== AUTO USER ID ===================== */
 async function getNextUserId() {
@@ -42,15 +41,17 @@ router.post('/signup', async (req, res) => {
       country,
       phoneCode,
       phoneNumber,
+      role: 'user',
     });
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-/* ===================== LOGIN ===================== */
+/* ===================== LOGIN (JWT FIXED) ===================== */
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -61,40 +62,51 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
-    res.json({
-  message: 'Login successful',
-  userId: user.userId,
-  email: user.email,   // ✅ ADD THIS
-  role: 'user',
-});
+    // 🔐 CREATE JWT
+    const token = jwt.sign(
+      {
+        id: user._id,
+        userId: user.userId,
+        email: user.email,
+        role: 'user',
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES || '7d' }
+    );
 
-  } catch {
+    res.json({
+      message: 'Login successful',
+      token,
+      userId: user.userId,
+      email: user.email,
+      role: 'user',
+    });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
-})
+});
 
-/* ===================== FORGOT PASSWORD (SEND CODE) ===================== */
+/* ===================== FORGOT PASSWORD ===================== */
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
+
     if (!user) {
-      // Security: do not reveal user existence
       return res.json({ message: 'If email exists, code sent' });
     }
 
-    // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.resetPasswordToken = code;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
     await sendEmail(
       email,
       'Password Reset Code',
-      `Your password reset code is:\n\n${code}\n\nThis code expires in 10 minutes.`
+      `Your password reset code is ${code}. It expires in 10 minutes.`
     );
 
     res.json({ message: 'Reset code sent to email' });
@@ -109,10 +121,6 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
 
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ message: 'All fields required' });
-    }
-
     const user = await User.findOne({
       email,
       resetPasswordToken: code,
@@ -123,11 +131,9 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired code' });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-
     await user.save();
 
     res.json({ message: 'Password reset successful' });
@@ -136,34 +142,27 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-
-/* ===================== GET PROFILE BY ID ===================== */
+/* ===================== GET PROFILE ===================== */
 router.get('/me/:userId', async (req, res) => {
   try {
     const user = await User.findOne(
       { userId: Number(req.params.userId) },
-      {
-        password: 0,
-        resetPasswordToken: 0,
-        resetPasswordExpires: 0,
-        __v: 0,
-      }
+      { password: 0, resetPasswordToken: 0, resetPasswordExpires: 0, __v: 0 }
     );
 
     if (!user) return res.status(404).json({ message: 'User not found' });
-
     res.json(user);
   } catch {
     res.status(500).json({ message: 'Server error' });
   }
 });
-// Get all users (admin only)
+
+/* ===================== GET ALL USERS (ADMIN READY) ===================== */
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0, resetPasswordToken: 0, resetPasswordExpires: 0, __v: 0 });
+    const users = await User.find({}, { password: 0 });
     res.json(users);
   } catch (err) {
-    console.error('Error fetching users:', err);
     res.status(500).json({ message: 'Error fetching users' });
   }
 });

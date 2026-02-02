@@ -2,9 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import type { MainTabsParamList } from '../navigation/MainTabs';
+import { useNotifications } from '../contexts/NotificationContext';
+
+type HeaderNavigationProp = NativeStackNavigationProp<MainTabsParamList>;
 
 interface Props {
   title: string;
@@ -14,8 +19,10 @@ interface Props {
 }
 
 export const Header: React.FC<Props> = ({ title, subtitle, right, showBackButton = false }) => {
-  const navigation = useNavigation();
-  
+  const navigation = useNavigation<HeaderNavigationProp>();
+  const { unreadCount } = useNotifications();
+
+
   return (
     <View style={styles.container}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -30,6 +37,19 @@ export const Header: React.FC<Props> = ({ title, subtitle, right, showBackButton
         </View>
       </View>
       <View style={styles.right}>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Profile')}
+          style={{ marginRight: 16, position: 'relative' }}
+        >
+          <Ionicons name="notifications-outline" size={24} color={theme.colors.primary} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
         {right}
         <Ionicons name="school-outline" size={22} color={theme.colors.primary} />
       </View>
@@ -47,9 +67,25 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
   },
   title: {
-    fontSize: theme.typography.title,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -3,
+    backgroundColor: theme.colors.danger,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   subtitle: {
     marginTop: 2,
@@ -65,6 +101,7 @@ const styles = StyleSheet.create({
 export const HeaderTab: React.FC = () => {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
+   const { unreadCount } = useNotifications();
   const { cart } = useCart();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -121,9 +158,17 @@ export const HeaderTab: React.FC = () => {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={goToNotifications}>
-            <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
-          </TouchableOpacity>
+          <TouchableOpacity onPress={goToNotifications} style={{ position: 'relative' }}>
+       <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
+     {unreadCount > 0 && (
+     <View style={headerTabStyles.cartBadge}>
+      <Text style={headerTabStyles.cartBadgeText}>
+        {unreadCount}
+      </Text>
+    </View>
+  )}
+</TouchableOpacity>
+
         </View>
       </View>
 

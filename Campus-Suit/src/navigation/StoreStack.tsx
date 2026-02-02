@@ -6,7 +6,7 @@ import { CartScreen } from '../screens/Store/CartScreen';
 import { CheckoutScreen } from '../screens/Store/CheckoutScreen';
 import { OrderStatusScreen } from '../screens/Store/OrderStatusScreen';
 import { SearchScreen } from '../screens/Common/SearchScreen';
-import { NotificationsScreen } from '../screens/Common/NotificationsScreen';
+import NotificationScreen from '../screens/Common/NotificationsScreen';
 
 export type StoreStackParamList = {
   StoreHome: undefined;
@@ -28,6 +28,6 @@ export const StoreStack = () => (
     <Stack.Screen name="Checkout" component={CheckoutScreen} />
     <Stack.Screen name="OrderStatus" component={OrderStatusScreen} />
     <Stack.Screen name="Search" component={SearchScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    <Stack.Screen name="Notifications" component={NotificationScreen} />
   </Stack.Navigator>
 );

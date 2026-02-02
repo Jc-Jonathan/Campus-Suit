@@ -91,6 +91,18 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     app.status = status;
+    const User = require('../models/user');
+
+if (status === 'approved') {
+  const user = await User.findOne({ email: app.email });
+
+  if (!user) {
+    console.warn('Approved applicant has no user account:', app.email);
+  }
+
+  app.approvedUser = user ? user._id : null;
+}
+
     await app.save();
 
     let subject = '';

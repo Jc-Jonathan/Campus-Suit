@@ -14,7 +14,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
 import { MainStackParamList } from '../../navigation/MainStack';
 import { Header, HeaderTab } from '../../components/Header';
-import { AppButton } from '../../components/AppButton';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,13 +30,11 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
   navigation,
 }) => {
   const { user } = useAuth();
-
   const { id } = route.params;
 
   const [scholarship, setScholarship] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 FETCH SINGLE SCHOLARSHIP BY ID
   useEffect(() => {
     const fetchScholarship = async () => {
       try {
@@ -50,7 +47,7 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
         }
 
         setScholarship(json.data);
-      } catch (err) {
+      } catch {
         Alert.alert('Error', 'Failed to load scholarship');
       } finally {
         setLoading(false);
@@ -59,61 +56,49 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
 
     fetchScholarship();
   }, [id]);
- 
-  // 🔹 APPLY NOW WITH CONFIRMATION
 
   const handleApplyNow = () => {
-  // ❌ Not logged in
-  if (!user) {
-    Alert.alert(
-      'Login Required',
-      'You must be logged in to apply for this scholarship.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'OK',
-          onPress: () =>
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
-              })
-            ),
-        },
-      ]
-    );
-    return;
-  }
+    if (!user) {
+      Alert.alert(
+        'Login Required',
+        'You must be logged in to apply for this scholarship.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Login',
+            onPress: () =>
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
+                })
+              ),
+          },
+        ]
+      );
+      return;
+    }
 
-  // ✅ Logged in → proceed
-  navigation.navigate('ScholarshipApply', {
-    scholarshipId: scholarship._id,
-    scholarshipTitle: scholarship.title,
-  });
-};
+    navigation.navigate('ScholarshipApply', {
+      scholarshipId: scholarship._id,
+      scholarshipTitle: scholarship.title,
+    });
+  };
 
-
-  // 🔹 DOWNLOAD COURSE LIST WITH CONFIRMATION
   const handleCourseDownload = () => {
     if (!scholarship?.courseFileUrl) {
       Alert.alert('Unavailable', 'No course list uploaded.');
       return;
     }
 
-    Alert.alert(
-      'Download Course List',
-      'Do you want to download the course list?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Download',
-          onPress: () => {
-            const fileUrl = `${BASE_URL}${scholarship.courseFileUrl}`;
-            Linking.openURL(fileUrl);
-          },
-        },
-      ]
-    );
+    Alert.alert('Download Course List', 'Proceed with download?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Download',
+        onPress: () =>
+          Linking.openURL(`${BASE_URL}${scholarship.courseFileUrl}`),
+      },
+    ]);
   };
 
   if (loading) {
@@ -140,45 +125,55 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
       <Header title={scholarship.title} subtitle="Scholarship Details" />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.amount}>
-          ${scholarship.amount?.toLocaleString()}
-        </Text>
+        {/* AMOUNT CARD */}
+        <View style={styles.amountCard}>
+          <Text style={styles.amountLabel}>Scholarship Amount</Text>
+          <Text style={styles.amountValue}>
+            ${scholarship.amount?.toLocaleString()}
+          </Text>
+          <Text style={styles.deadline}>
+            Deadline: {scholarship.deadline}
+          </Text>
+        </View>
 
-        <Text style={styles.deadline}>
-          Deadline: {scholarship.deadline}
-        </Text>
+        {/* DESCRIPTION */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.body}>{scholarship.description}</Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>Description</Text>
-        <Text style={styles.body}>{scholarship.description}</Text>
-
+        {/* COVERAGE */}
         {scholarship.percentage !== undefined && (
-          <>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Coverage</Text>
-            <Text style={styles.body}>
-              {scholarship.percentage}% coverage
-            </Text>
-          </>
+            <View style={styles.coverageBadge}>
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={styles.coverageText}>
+                {scholarship.percentage}% covered
+              </Text>
+            </View>
+          </View>
         )}
 
-        {/* 🔹 ACTION BUTTONS */}
-        <View style={styles.actionsRow}>
+        {/* ACTIONS */}
+        <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.courseButton}
+            style={styles.secondaryButton}
             activeOpacity={0.85}
             onPress={handleCourseDownload}
           >
             <Ionicons name="document-text-outline" size={18} color="#fff" />
-            <Text style={styles.buttonText}>Course List</Text>
+            <Text style={styles.secondaryText}>Course List</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-           style={styles.applyButton}
+            style={styles.primaryButton}
             activeOpacity={0.9}
-             onPress={handleApplyNow}
-            >
-          <Text style={styles.applyButtonText}>APPLY NOW</Text>
-    </TouchableOpacity>
-
+            onPress={handleApplyNow}
+          >
+            <Text style={styles.primaryText}>Apply Now</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -190,77 +185,119 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+
   content: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
   },
-  amount: {
-    fontSize: theme.typography.subtitle,
-    fontWeight: '700',
+
+  amountCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    elevation: 3,
+  },
+
+  amountLabel: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+  },
+
+  amountValue: {
+    fontSize: 26,
+    fontWeight: '800',
     color: theme.colors.primary,
+    marginVertical: 6,
   },
+
   deadline: {
-    marginTop: 4,
+    fontSize: 13,
     color: theme.colors.textMuted,
   },
-  sectionTitle: {
+
+  section: {
     marginTop: 20,
-    fontWeight: '600',
+  },
+
+  sectionTitle: {
     fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+    color: theme.colors.text,
   },
+
   body: {
-    marginTop: 6,
-    color: theme.colors.textMuted,
+    fontSize: 14,
     lineHeight: 22,
+    color: theme.colors.textMuted,
   },
-  actionsRow: {
+
+  coverageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginTop: 6,
+    gap: 6,
+  },
+
+  coverageText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 30,
+    marginTop: 32,
   },
-  courseButton: {
+
+  secondaryButton: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  buttonText: {
-    color: '#fff',
-    marginLeft: 8,
-    fontWeight: '600',
-    fontSize: 15,
-    letterSpacing: 0.5,
-  },
-  applyButton: {
-    flex: 2,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
+    gap: 8,
     paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    opacity: 0.9,
+  },
+
+  secondaryText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  primaryButton: {
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
     elevation: 4,
   },
-  applyButtonText: {
+
+  primaryText: {
     color: '#fff',
-    textAlign: 'center',
     fontWeight: '700',
     fontSize: 15,
-    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
+
   muted: {
     padding: 20,
     color: theme.colors.textMuted,
   },
+
   center: {
     flex: 1,
     justifyContent: 'center',

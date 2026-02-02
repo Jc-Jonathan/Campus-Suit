@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import productsData from '../mock/products.json';
-import ordersData from '../mock/orders.json';
 
 export interface Scholarship {
   _id?: string;
@@ -42,26 +40,10 @@ export interface LoanProduct {
 }
 
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image?: string;
-  tags?: string[];
-}
-
-export interface Order {
-  id: string;
-  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  total: number;
-  createdAt: string;
-}
 
 interface AppDataContextValue {
   isLoading: boolean;
-  products: Product[];
-  orders: Order[];
-loanApplications: LoanApplication[];
+  loanApplications: LoanApplication[];
   loanProducts: LoanProduct[];
 }
 
@@ -70,9 +52,7 @@ const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<Omit<AppDataContextValue, 'isLoading'>>({
-    products: [],
-    orders: [],
-loanApplications: [],
+    loanApplications: [],
     loanProducts: [],
   });
 
@@ -81,9 +61,7 @@ loanApplications: [],
     const timeout = setTimeout(() => {
       // Initialize with mock data or fetch from your API
       setState({
-        products: productsData as unknown as Product[],
-        orders: ordersData as unknown as Order[],
-loanApplications: [], // Initialize with empty array or fetch from API
+        loanApplications: [], // Initialize with empty array or fetch from API
         loanProducts: [
           {
             id: '1',
