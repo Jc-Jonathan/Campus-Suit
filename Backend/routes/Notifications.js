@@ -3,6 +3,21 @@ const router = express.Router();
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 
+// Helper function to create shop notifications
+const createShopNotification = async (message) => {
+  try {
+    await Notification.create({
+      message,
+      category: 'SHOP',
+      targetType: 'ALL',
+      targetUsers: [],
+    });
+    console.log('Shop notification created:', message);
+  } catch (error) {
+    console.error('Failed to create shop notification:', error);
+  }
+};
+
 /* ================= CREATE (ADMIN) ================= */
 router.post('/', auth, async (req, res) => {
   try {
@@ -11,8 +26,6 @@ router.post('/', auth, async (req, res) => {
       type,
       recipients,
       category,
-      pdfUrl,
-      fileName,
     } = req.body;
 
     const notification = await Notification.create({
@@ -22,8 +35,6 @@ router.post('/', auth, async (req, res) => {
       targetUsers: type === 'USERS' || type === 'APPROVED_STUDENTS'
         ? recipients
         : [],
-      pdfUrl,
-      fileName,
     });
 
     res.status(201).json(notification);
@@ -55,8 +66,11 @@ router.get('/user', auth, async (req, res) => {
           { targetUsers: userId },
         ],
       };
+    } else if (category === 'SHOP') {
+      // Shop notifications visible to everyone
+      query = { category: 'SHOP' };
     } else {
-      // 🔥 ALL = announcements + scholarships
+      // 🔥 ALL = announcements + scholarships + shop
       query = {
         $or: [
           // Announcements
@@ -70,6 +84,10 @@ router.get('/user', auth, async (req, res) => {
           // Scholarships (no restriction)
           {
             category: 'SCHOLARSHIP',
+          },
+          // Shop notifications (no restriction)
+          {
+            category: 'SHOP',
           },
         ],
       };
@@ -126,14 +144,12 @@ router.put('/:id/read', auth, async (req, res) => {
 /* ================= UPDATE (ADMIN) ================= */
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { message, pdfUrl, fileName } = req.body;
+    const { message } = req.body;
 
     const updated = await Notification.findByIdAndUpdate(
       req.params.id,
       {
         ...(message && { message }),
-        ...(pdfUrl && { pdfUrl }),
-        ...(fileName && { fileName }),
       },
       { new: true }
     );

@@ -1,57 +1,59 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('../cloudinary');
+
 const router = express.Router();
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '../public/uploads/notifications');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'notification-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/pdf') {
-    cb(null, true);
-  } else {
-    cb(new Error('Only PDF files are allowed'), false);
-  }
-};
-
+/**
+ * Multer config
+ * - memoryStorage (no local files)
+ */
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter,
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  },
 });
 
-// Upload file
-router.post('/', upload.single('file'), (req, res) => {
+/**
+ * POST /api/upload
+ * Upload PDF to Cloudinary
+ */
+router.post('/', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const fileUrl = `/uploads/notifications/${req.file.filename}`;
-    
-    res.status(200).json({
-      message: 'File uploaded successfully',
-      fileUrl,
-      fileName: req.file.originalname,
+    // Convert buffer to base64
+    const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await cloudinary.uploader.upload(base64File, {
+      folder: 'notifications',
+      resource_type: 'raw', // IMPORTANT for PDFs
+      public_id: `notification_${Date.now()}`,
     });
+
+    res.status(200).json({
+      success: true,
+      message: 'File uploaded successfully',
+      fileUrl: result.secure_url,     // ✅ SAVE THIS IN MONGODB
+      publicId: result.public_id,     // ✅ USE FOR DELETE
+      originalName: req.file.originalname,
+    });
+
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ message: 'Error uploading file', error: error.message });
+    console.error('Cloudinary upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Upload failed',
+      error: error.message,
+    });
   }
 });
 

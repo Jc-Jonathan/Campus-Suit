@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   Platform,
+  BackHandler,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -15,6 +16,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { DocumentPickerAsset } from 'expo-document-picker';
 import { theme } from '../../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from '@react-navigation/native';
 
 type DocumentResult = DocumentPickerAsset | null;
 
@@ -28,7 +31,8 @@ export const Loan = () => {
   const [interestRate, setInterestRate] = useState('');
   const [document, setDocument] = useState<DocumentResult>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [repaymentPeriod, setRepaymentPeriod] = useState('');
+ const [repaymentValue, setRepaymentValue] = useState('');
+const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'DAY' |'WEEK' | 'MONTH' | 'YEAR'>('MONTH');
   const [eligibility, setEligibility] = useState('');
   const [documents, setDocuments] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -96,7 +100,8 @@ export const Loan = () => {
     !minAmount ||
     !maxAmount ||
     !interestRate ||
-    !repaymentPeriod
+    !repaymentValue ||
+    !repaymentUnit
   ) {
     Alert.alert('Missing Fields', 'Please fill all required fields');
     return;
@@ -106,7 +111,7 @@ export const Loan = () => {
 
   try {
     const formData = new FormData();
-    
+    const repaymentPeriod = `${repaymentValue} ${repaymentUnit.toLowerCase()}${Number(repaymentValue) > 1 ? 's' : ''}`;
     // Append all form fields
     formData.append('title', title);
     formData.append('description', description);
@@ -114,6 +119,7 @@ export const Loan = () => {
     formData.append('maxAmount', maxAmount);
     formData.append('interestRate', interestRate);
     formData.append('repaymentPeriod', repaymentPeriod);
+
     if (eligibility) formData.append('eligibility', eligibility);
     if (documents) formData.append('requiredDocuments', documents);
     if (deadline) formData.append('applicationDeadline', deadline);
@@ -160,7 +166,8 @@ export const Loan = () => {
     setMinAmount('');
     setMaxAmount('');
     setInterestRate('');
-    setRepaymentPeriod('');
+    setRepaymentValue('');
+    setRepaymentUnit('MONTH');
     setEligibility('');
     setDocuments('');
     setDeadline('');
@@ -188,7 +195,9 @@ export const Loan = () => {
     setMinAmount(String(loan.minAmount));
     setMaxAmount(String(loan.maxAmount));
     setInterestRate(String(loan.interestRate));
-    setRepaymentPeriod(loan.repaymentPeriod);
+   const [value, unit] = loan.repaymentPeriod.split(' ');
+   setRepaymentValue(value);
+    setRepaymentUnit(unit.toUpperCase());
     setEligibility(loan.eligibility || '');
     setDocuments(loan.requiredDocuments || '');
     setDeadline(loan.applicationDeadline || '');
@@ -262,12 +271,41 @@ export const Loan = () => {
           onChangeText={setInterestRate}
         />
 
-        <TextInput
-          placeholder="Repayment Period (e.g.6 months)"
-          style={styles.input}
-          value={repaymentPeriod}
-          onChangeText={setRepaymentPeriod}
-        />
+        <View style={styles.repaymentRow}>
+  <TextInput
+    placeholder="Number"
+    style={[styles.input, styles.repaymentNumber]}
+    keyboardType="numeric"
+    value={repaymentValue}
+    onChangeText={setRepaymentValue}
+  />
+
+  <View style={styles.repaymentPicker}>
+    <Picker
+      selectedValue={repaymentUnit}
+      onValueChange={(itemValue) => {
+        try {
+          console.log('Picker value changed:', itemValue);
+          if (itemValue) {
+            setRepaymentUnit(itemValue);
+          }
+        } catch (error) {
+          console.error('Picker error:', error);
+        }
+      }}
+    >
+      <Picker.Item label="Seconds" value="SECOND" />
+      <Picker.Item label="Minutes" value="MINUTE" />
+      <Picker.Item label="Hours" value="HOUR" />
+      <Picker.Item label="Days" value="DAY" />
+      <Picker.Item label="Weeks" value="WEEK" />
+      <Picker.Item label="Months" value="MONTH" />
+      <Picker.Item label="Years" value="YEAR" />
+    </Picker>
+  </View>
+
+      </View>
+
       </View>
 
       {/* ELIGIBILITY */}
@@ -483,6 +521,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  repaymentRow: {
+  flexDirection: 'row',
+  gap: 10,
+},
+
+repaymentNumber: {
+  flex: 1,
+},
+
+repaymentPicker: {
+  flex: 1,
+  minWidth:15,
+  backgroundColor: '#F2F4F7',
+  borderRadius: 5,
+  marginBottom:20,
+  justifyContent: 'center',
+},
+
+picker: {
+  height: 50,
+  width: '100%',
+  backgroundColor: '#F2F4F7',
+},
+
+pickerItem: {
+  height: 50,
+  fontSize: 14,
+  color: '#333',
+},
 
   submitText: {
     color: '#fff',

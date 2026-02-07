@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 type Props = {
   navigation: {
-    navigate: (screen: 'SignIn' | 'Cart' | 'Checkout' | 'AuthFlow', params?: any) => void;
+    navigate: (screen: 'SignIn' | 'Cart' | 'Checkout' | 'AuthFlow' | 'Tracking' | 'OrderDisplay', params?: any) => void;
   };
   route: {
     params: {
@@ -39,7 +39,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { addToCart } = useCart();
+  const { addToCart, addToDirectCheckout } = useCart();
   const { isLoggedIn } = useAuth();
 
   const API_URL = `http://192.168.31.130:5000/api/products`;
@@ -104,7 +104,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             <AppButton
               label="Add to Cart"
               variant="outline"
-              style={{ flex: 1 }}
+              style={[styles.actionButton, styles.outlineButton]}
+              textStyle={styles.buttonText}
               onPress={() => {
                 addToCart({
                   productId: product.productId,
@@ -119,7 +120,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
             <AppButton
               label="Order Now"
-              style={{ flex: 1 }}
+              style={[styles.actionButton, styles.primaryButton]}
+              textStyle={styles.buttonText}
               onPress={() => {
                 if (!isLoggedIn) {
                   Alert.alert(
@@ -134,7 +136,30 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   );
                   return;
                 }
-                navigation.navigate('Checkout', { product });
+                
+                // Add product to direct checkout
+                addToDirectCheckout({
+                  productId: product.productId,
+                  name: product.name,
+                  imageUrl: product.imageUrl,
+                  newPrice: product.newPrice,
+                  oldPrice: product.oldPrice,
+                });
+                
+                // Navigate to checkout
+                navigation.navigate('Checkout');
+              }}
+            />
+          </View>
+
+          <View style={styles.basketButtonContainer}>
+            <AppButton
+              label="Check Your Basket"
+              variant="outline"
+              style={styles.basketButton}
+              textStyle={styles.buttonText}
+              onPress={() => {
+                navigation.navigate('OrderDisplay');
               }}
             />
           </View>
@@ -174,7 +199,7 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#111',
     marginBottom: 10,
@@ -187,13 +212,13 @@ const styles = StyleSheet.create({
   },
 
   newPrice: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: theme.colors.primary,
   },
 
   oldPrice: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#b00020',
     textDecorationLine: 'line-through',
   },
@@ -205,16 +230,16 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     marginBottom: 6,
     color: '#111',
   },
 
   description: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#555',
-    lineHeight: 22,
+    lineHeight: 18,
     marginBottom: 24,
   },
 
@@ -223,10 +248,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
+  basketButtonContainer: {
+    marginTop: 16,
+  },
+
   muted: {
     textAlign: 'center',
     color: '#999',
-    fontSize: 16,
+    fontSize: 14,
     marginTop: 40,
   },
 
@@ -235,5 +264,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
+  },
+
+  actionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: 40,
+  },
+
+  outlineButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+  },
+
+  basketButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: 40,
+  },
+
+  buttonText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

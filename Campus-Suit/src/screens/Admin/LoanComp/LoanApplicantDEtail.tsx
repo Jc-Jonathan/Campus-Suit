@@ -216,6 +216,8 @@ export const LoanApplicantDetail = () => {
           <Text style={styles.sectionTitle}>Loan Details</Text>
           <DetailItem label="Loan Title" value={application.loanTitle} />
           <DetailItem label="Amount" value={`$${application.amount?.toLocaleString()}`} />
+          <DetailItem label="Interest Rate" value={application.interestRate !== undefined && application.interestRate !== null ? `${application.interestRate}% APR` : 'N/A'} />
+          <DetailItem label="Repayment Period" value={application.repaymentPeriod} />
           <DetailItem label="Purpose" value={application.purpose} />
           <DetailItem 
             label="Application Date" 

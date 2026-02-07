@@ -63,29 +63,104 @@ const ApplicantDetail = ({ route, navigation }: any) => {
   };
 
   const updateStatus = async (status: 'approved' | 'rejected') => {
-  try {
-    setLoading(true);
-    await axios.patch(`${API_URL}/${id}/status`, { status });
-    
-    // Update the local state to reflect the change immediately
-    setApp((prev: any | null) => prev ? { ...prev, status } : null);
-    
-    Alert.alert(
-      'Success',
-      `Application ${status.toUpperCase()} and email sent to applicant`
-    );
-    
-    // Navigate back after a short delay to show the success message
-    setTimeout(() => {
-      navigation.goBack();
-    }, 1500);
-  } catch (err) {
-    console.error('Error updating status:', err);
-    Alert.alert('Error', 'Failed to update status or send email');
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      
+      // Update the application status
+      await axios.patch(`${API_URL}/${id}/status`, { status });
+      
+      // Prepare email content
+      const emailSubject = status === 'approved' 
+        ? `Congratulations on Your Scholarship Approval - ${app.scholarshipTitle}`
+        : `Scholarship Application Status Update - ${app.scholarshipTitle}`;
+      
+      const emailMessage = status === 'approved'
+        ? `Hello ${app.fullName},\n\nCongratulations! Your application for the ${app.scholarshipTitle} scholarship has been approved.\n\nYou applied for studying ${app.program} and we are pleased to inform you of your success.\n\nBest regards,\nCampus Support Team`
+        : `Hello ${app.fullName},\n\nYour application for the ${app.scholarshipTitle} scholarship has been denied.\n\nWe encourage you to try applying again next time.\n\nGood day,\nCampus Support Team`;
+      
+      // Try to send email notification (don't fail if this doesn't work)
+      try {
+        await axios.post('http://192.168.31.130:5000/api/send-email', {
+          to: app.email,
+          subject: emailSubject,
+          message: emailMessage,
+          type: 'scholarship-status'
+        });
+        console.log('Email sent successfully to:', app.email);
+      } catch (emailError) {
+        console.warn('Email sending failed:', emailError);
+        // Continue with notification storage even if email fails
+      }
+      
+      // Store notification in backend (try with simpler structure first)
+      const notificationMessage = status === 'approved'
+        ? `Congratulations! Your scholarship application for ${app.scholarshipTitle} has been approved.`
+        : `Your scholarship application for ${app.scholarshipTitle} has been denied.`;
+      
+      try {
+        // Try the standard notification endpoint first
+        await axios.post('http://192.168.31.130:5000/api/notifications', {
+          message: notificationMessage,
+          category: 'SCHOLARSHIP',
+          type: status === 'approved' ? 'SCHOLARSHIP_APPROVED' : 'SCHOLARSHIP_REJECTED',
+          recipients: [app._id], // Send to the applicant
+          createdBy: 'admin',
+          applicantInfo: {
+            fullName: app.fullName,
+            email: app.email,
+            scholarshipTitle: app.scholarshipTitle,
+            program: app.program,
+            status: status
+          }
+        });
+        console.log('Notification stored successfully');
+      } catch (notificationError) {
+        console.warn('Notification storage failed:', notificationError);
+        // Try with minimal structure
+        try {
+          await axios.post('http://192.168.31.130:5000/api/notifications', {
+            message: notificationMessage,
+            category: 'SCHOLARSHIP',
+            recipients: [app._id],
+            createdBy: 'admin'
+          });
+          console.log('Minimal notification stored successfully');
+        } catch (minimalError) {
+          console.warn('Minimal notification storage also failed:', minimalError);
+          // Continue anyway - the status update was successful
+        }
+      }
+      
+      // Update the local state to reflect the change immediately
+      setApp((prev: any | null) => prev ? { ...prev, status } : null);
+      
+      Alert.alert(
+        'Success',
+        `Application ${status.toUpperCase()} successfully!`
+      );
+      
+      // Navigate back after a short delay to show the success message
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      let errorMessage = 'Failed to update application status';
+      
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        errorMessage = err.response.data?.message || errorMessage;
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        errorMessage = `Failed to update status: ${err.message}`;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const [isDownloading, setIsDownloading] = useState(false);

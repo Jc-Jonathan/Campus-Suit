@@ -1,14 +1,22 @@
 export interface Order {
-  id: string;
-  productName: string;
-  quantity: number;
-  totalPrice: number;
-  customerName: string;
-  customerId: string;
+  orderId: number;
+  name: string;
+  email: string;
+  phoneNumber: string;
   address: string;
-  phone: string;
-  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
-  date: string;
+  items: OrderItem[];
+  subtotal: number;
+  totalAmount: number;
+  paymentDocumentUrl: string;
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: string;
+}
+
+export interface OrderItem {
+  productName: string;
+  productImage: string;
+  quantity: number;
+  price: number;
 }
 
 export interface Product {

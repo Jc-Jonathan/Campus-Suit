@@ -51,12 +51,13 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
         setLoan(data);
       } catch {
         Alert.alert('Error', 'Unable to load loan');
+        navigation.goBack();
       } finally {
         setLoading(false);
       }
     };
     fetchLoan();
-  }, [id]);
+  }, [id, navigation]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/banners?screen=LOAN_DETAIL&position=HERO`)

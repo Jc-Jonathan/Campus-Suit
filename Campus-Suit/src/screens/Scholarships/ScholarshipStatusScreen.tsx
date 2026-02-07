@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Header, HeaderTab } from '../../components/Header';
@@ -6,6 +6,7 @@ import { AppCard } from '../../components/AppCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { theme } from '../../theme/theme';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ScholarshipApplication {
   id: string;
@@ -14,6 +15,7 @@ interface ScholarshipApplication {
   submittedAt: string;
   scholarshipTitle?: string;
   provider?: string;
+  email?: string;
 }
 
 const formatDate = (dateString: string) => {
@@ -30,6 +32,7 @@ const formatDate = (dateString: string) => {
 const API_URL = 'http://192.168.31.130:5000/api/scholarshipApplications';
 
 export const ScholarshipStatusScreen: React.FC = () => {
+  const { user } = useAuth();
   const [applications, setApplications] = useState<ScholarshipApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +58,18 @@ export const ScholarshipStatusScreen: React.FC = () => {
           status: app.status || 'pending',
           submittedAt: app.createdAt || new Date().toISOString(),
           scholarshipTitle: app.scholarshipTitle || 'Scholarship',
-          provider: app.provider || 'University'
+          provider: app.provider || 'University',
+          email: app.email || '' // Add email field for filtering
         }));
-        setApplications(appsWithTitles);
+        
+        // Filter applications to show only those belonging to the logged-in user
+        const userApplications = appsWithTitles.filter((app: ScholarshipApplication & { email?: string }) => {
+          if (!user?.email) return false;
+          return app.email === user.email;
+        });
+        
+        console.log('Filtered applications for user:', user?.email, userApplications);
+        setApplications(userApplications);
         setError(null); // Clear any previous errors
       } else {
         setError('No data received from server');
@@ -68,7 +80,7 @@ export const ScholarshipStatusScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.email]);
 
   // Initial fetch when component mounts
   useEffect(() => {

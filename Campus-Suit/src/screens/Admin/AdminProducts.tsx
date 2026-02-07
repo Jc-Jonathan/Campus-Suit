@@ -4,8 +4,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 
 type AdminProductsNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-import { ProductNotification } from './ProductsComp/ProductNotification';
 import {
   View,
   Text,
@@ -16,37 +14,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { AllProducts } from './ProductsComp/AllProducts';
 import {AddProduct} from './ProductsComp/AddProduct';
 import {Orders} from './ProductsComp/Orders';
-import { Order } from '../../types';
 import { Product } from './ProductsComp/AllProducts';
 
 type ViewType = 'products' | 'add' | 'orders' | 'notifications';
 
-interface Notification {
-  id: string;
-  message: string;
-  date: string;
-  recipients: number;
-}
-
 export const AdminProducts = () => {
   const navigation = useNavigation<AdminProductsNavigationProp>();
   const [currentView, setCurrentView] = useState<ViewType>('products');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  const handleSendNotification = async (message: string) => {
-    const newNotification: Notification = {
-      id: Date.now().toString(),
-      message,
-      date: new Date().toISOString(),
-      recipients: 0, // You might want to update this with actual recipient count
-    };
-    
-    setNotifications(prev => [newNotification, ...prev]);
-    // Here you would typically make an API call to send the notification
-    console.log('Sending notification:', message);
-  };
 
   const handleAddProduct = (product: any) => {
     // Here you would typically make an API call to save the product
@@ -85,14 +61,7 @@ export const AdminProducts = () => {
           navigation={navigation as unknown as NativeStackNavigationProp<RootStackParamList, 'AddProduct'>}
         />;
       case 'orders':
-        return <Orders orders={orders} />;
-      case 'notifications':
-        return (
-          <ProductNotification 
-            notifications={notifications}
-            onSendNotification={handleSendNotification}
-          />
-        );
+        return <Orders />;
       default:
         return null;
     }
@@ -120,12 +89,6 @@ export const AdminProducts = () => {
           label="Orders"
           active={currentView === 'orders'}
           onPress={() => setCurrentView('orders')}
-        />
-        <SidebarButton
-          icon="notifications-outline"
-          label="Notifications"
-          active={currentView === 'notifications'}
-          onPress={() => setCurrentView('notifications')}
         />
       </View>
 

@@ -54,7 +54,7 @@ export const AdminBanners: React.FC = () => {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });
@@ -74,14 +74,17 @@ export const AdminBanners: React.FC = () => {
   // =========================
   // FRONTEND DUPLICATE CHECK
   // =========================
-  const bannerExists = () => {
-    return banners.some(
-      (b) =>
-        b.screen === screen &&
-        b.position === position &&
-        b._id !== editingId
-    );
-  };
+  // FRONTEND DUPLICATE CHECK
+const bannerExists = () => {
+  return banners.some(
+    (b) =>
+      b.screen === screen &&
+      b.position === position &&
+      b.priority === Number(priority) &&
+      b._id !== editingId
+  );
+};
+
 
   // =========================
   // SAVE / UPDATE BANNER

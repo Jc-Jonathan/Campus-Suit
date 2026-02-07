@@ -9,9 +9,9 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Image,
-  SafeAreaView,
   StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppButton } from '../../components/AppButton';
 import { Header, HeaderTab } from '../../components/Header';

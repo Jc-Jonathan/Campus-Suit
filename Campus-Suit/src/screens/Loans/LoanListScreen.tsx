@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   statusButtonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 14,
   },
   card: {
     marginBottom: 16,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text,
     marginBottom: 8,
@@ -177,12 +177,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   meta: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 6,
   },
   amount: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.primary,
     marginTop: 4,
@@ -197,14 +197,14 @@ const styles = StyleSheet.create({
   rateText: {
     color: theme.colors.primary,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 11,
   },
   deadline: {
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.05)',
-    fontSize: 13,
+    fontSize: 11,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
   },
@@ -219,13 +219,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginBottom: 16,
   },

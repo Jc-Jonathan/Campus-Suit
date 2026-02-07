@@ -11,7 +11,7 @@ const NotificationSchema = new mongoose.Schema(
     // 🔥 NEW
     category: {
       type: String,
-      enum: ['ANNOUNCEMENT', 'SCHOLARSHIP'],
+      enum: ['ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP'],
       required: true,
     },
 
@@ -37,6 +37,21 @@ const NotificationSchema = new mongoose.Schema(
 
     pdfUrl: String,
     fileName: String,
+    
+    // Store order details for shop notifications
+    orderDetails: {
+      orderId: Number,
+      customerName: String,
+      status: String,
+      items: [{
+        productName: String,
+        productImage: String,
+        price: Number,
+        quantity: Number
+      }],
+      totalAmount: Number,
+      createdAt: Date
+    }
   },
   { timestamps: true }
 );

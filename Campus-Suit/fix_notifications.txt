@@ -1,0 +1,12 @@
+The issue is in NotificationsScreen.tsx:
+
+1. Line 21: Change 'ANNOUNCEMENT' to 'ANNOUNCEMENT'
+2. Line 214: Change 'ANNOUNCEMENT' to 'ANNOUNCEMENT'
+
+Current:
+type FilterType = 'ALL' | 'ANNOUNCEMENT' | 'SCHOLARSHIP' | 'SHOP' | 'LOAN';
+{['ALL', 'ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP', 'LOAN'].map(f => (
+
+Should be:
+type FilterType = 'ALL' | 'ANNOUNCEMENT' | 'SCHOLARSHIP' | 'SHOP' | 'LOAN';
+{['ALL', 'ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP', 'LOAN'].map(f => (

@@ -59,6 +59,9 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [addressText, setAddressText] = useState('');
+  const [repaymentPeriod, setRepaymentPeriod] = useState('');
+  const [interestRate, setInterestRate] = useState('');
+  const [loanDetails, setLoanDetails] = useState<any>(null);
 
   const submissionDate = new Date().toISOString().split('T')[0];
 
@@ -74,6 +77,9 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
         
         const data = await response.json();
         setLoanTitle(data.title || 'Loan');
+        setLoanDetails(data);
+        setRepaymentPeriod(data.repaymentPeriod || '');
+        setInterestRate(data.interestRate?.toString() || '');
       } catch (error) {
         console.error('Error fetching loan details:', error);
         setLoanTitle('Loan');
@@ -135,14 +141,7 @@ useEffect(() => {
     return emailRegex.test(email);
   };
 
-  const handleEmailChange = (text: string) => {
-    setEmail(text);
-    if (text && !validateEmail(text)) {
-      setEmailError('Please enter a valid email address');
-    } else {
-      setEmailError('');
-    }
-  };
+  
 
   const getCurrentLocation = async () => {
     try {
@@ -233,6 +232,8 @@ useEffect(() => {
       formData.append('yearOfStudy', yearOfStudy);
       formData.append('loanTitle', loanTitle);
       formData.append('amount', amount);
+      formData.append('repaymentPeriod', repaymentPeriod);
+      formData.append('interestRate', interestRate);
       formData.append('purpose', purpose);
       if (signature) formData.append('signature', signature);
       formData.append('confirmAccurate', confirmAccurate.toString());
@@ -509,6 +510,20 @@ useEffect(() => {
           onChangeText={setAmount}
           keyboardType="numeric"
         />
+        <AppInput
+          label="Repayment period"
+          placeholder="e.g. 6 months"
+          value={repaymentPeriod}
+          editable={false}
+          />
+
+        <AppInput
+          label="Interest Rate"
+          placeholder="Interest rate"
+          value={interestRate ? `${interestRate}% APR` : ''}
+          editable={false}
+          />
+
         <AppInput
           label="Loan purpose (e.g. tuition, accommodation, emergency, books, transport)"
           placeholder='Enter your Loan purpose'

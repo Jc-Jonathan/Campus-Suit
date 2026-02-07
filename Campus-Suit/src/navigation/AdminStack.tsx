@@ -14,6 +14,7 @@ import { LoanApplicantDetail } from '../screens/Admin/LoanComp/LoanApplicantDEta
 import { LoanState } from '../screens/Admin/LoanComp/LoanState';
 import { LoanNotification } from '../screens/Admin/LoanComp/LoanNotification';
 import { EditProduct } from '../screens/Admin/ProductsComp/EditProduct';
+import { OrderDetailshow } from '../screens/Admin/ProductsComp/OrderDetailshow';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -49,6 +50,7 @@ export type AdminStackParamList = {
       __v?: number;
     } 
   };
+  OrderDetailshow: { orderId: number };
 };
 
 // Export the Stack type for use in other components
@@ -88,6 +90,7 @@ export const AdminStack = () => {
       <Stack.Screen name="LoanState" component={LoanState} />
       <Stack.Screen name="LoanNotification" component={LoanNotification} />
       <Stack.Screen name="EditProduct" component={EditProduct} />
+      <Stack.Screen name="OrderDetailshow" component={OrderDetailshow} />
     </Stack.Navigator>
   );
 };

@@ -4,6 +4,7 @@ import { LoanListScreen } from '../screens/Loans/LoanListScreen';
 import { LoanDetailScreen } from '../screens/Loans/LoanDetailScreen';
 import { LoanApplyScreen } from '../screens/Loans/LoanApplyScreen';
 import { LoanStatusScreen } from '../screens/Loans/LoanStatusScreen';
+import { LoanCalculationScreen } from '../screens/Loans/LoanCalculation';
 
 // In LoansStack.tsx
 export type LoansStackParamList = {
@@ -20,6 +21,13 @@ export type LoansStackParamList = {
   };
   LoanApply: { id: string };
   LoanStatus: { id?: string };
+  LoanCalculation: { 
+    loanId: string;
+    loanTitle: string;
+    amount: number;
+    interestRate: number;
+    repaymentPeriod: string;
+  };
 };
 
 const Stack = createNativeStackNavigator<LoansStackParamList>();
@@ -30,5 +38,6 @@ export const LoansStack = () => (
     <Stack.Screen name="LoanDetail" component={LoanDetailScreen} />
     <Stack.Screen name="LoanApply" component={LoanApplyScreen} />
     <Stack.Screen name="LoanStatus" component={LoanStatusScreen} />
+    <Stack.Screen name="LoanCalculation" component={LoanCalculationScreen} />
   </Stack.Navigator>
 );

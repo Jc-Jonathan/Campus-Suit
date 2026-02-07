@@ -17,6 +17,8 @@ export type LoanApplication = {
   phone?: string;
   email?: string;
   applicationDeadline?: string;
+  interestRate?: number;
+  repaymentPeriod?: string;
 };
 
 export const fetchLoanApplications = async (): Promise<LoanApplication[]> => {

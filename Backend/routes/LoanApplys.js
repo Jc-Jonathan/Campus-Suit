@@ -69,7 +69,9 @@ router.post('/', uploadFiles, async (req, res) => {
     const yearOfStudy = formData.yearOfStudy || '';
     const loanTitle = formData.loanTitle || '';
     const amount = formData.amount || 0;
+    const repaymentPeriod = formData.repaymentPeriod || '';
     const purpose = formData.purpose || '';
+    const interestRate = formData.interestRate || 0;
     const signature = formData.signature || '';
     // Convert various truthy values to boolean
     const toBoolean = (value) => {
@@ -97,7 +99,9 @@ router.post('/', uploadFiles, async (req, res) => {
       yearOfStudy,
       loanTitle,
       amount,
+      repaymentPeriod,
       purpose,
+      interestRate,
       signature: signature ? '[SIGNATURE PRESENT]' : 'Not provided',
       confirmAccurate,
       agreeTerms,
@@ -131,10 +135,12 @@ router.post('/', uploadFiles, async (req, res) => {
       studentId: studentId || undefined,
       homeAddress,  
       program,
+      repaymentPeriod,
       yearOfStudy,
       loanTitle,
       amount: Number(amount),
       purpose,
+      interestRate: Number(interestRate),
 
       // 
       // ✅ SAVE URLS DIRECTLY

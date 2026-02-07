@@ -1,14 +1,7 @@
 // Backend/routes/Banners.js
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const Banner = require('../models/Banner'); // Make sure this path is correct
-
-// Verify the Banner model is properly imported
-if (!Banner || typeof Banner !== 'function') {
-  console.error('Error: Banner model is not properly imported');
-  process.exit(1);
-}
+const Banner = require('../models/Banner');
 
 // POST /api/banners
 router.post('/', async (req, res) => {
@@ -21,21 +14,22 @@ router.post('/', async (req, res) => {
         message: 'Missing required fields: imageUrl, screen, and position are required'
       });
     }
-     // CHECK IF BANNER ALREADY EXISTS
-         const existingBanner = await Banner.findOne({
-          screen: screen.toUpperCase(),
-           position: position.toUpperCase(),
-            });
 
-        if (existingBanner) {
-          return res.status(409).json({
-             success: false,
-           message:
-      'Banner already exists for this screen and position. Please delete it first.',
-        });
-}
+    // ✅ DUPLICATE CHECK (screen + position + priority)
+    const existingBanner = await Banner.findOne({
+      screen: screen.toUpperCase(),
+      position: position.toUpperCase(),
+      priority: Number(priority),
+    });
 
-    // Create banner using the model
+    if (existingBanner) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'Banner already exists for this screen, position, and priority. Please delete it first.',
+      });
+    }
+
     const banner = new Banner({
       imageUrl,
       screen: screen.toUpperCase(),
@@ -52,10 +46,10 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Banner create error:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Failed to create banner',
-      error: err.message 
+      error: err.message
     });
   }
 });
@@ -66,10 +60,7 @@ router.get('/', async (req, res) => {
     const { screen, position, admin } = req.query;
 
     const query = {};
-
-    // Only filter active banners for user app
     if (!admin) query.isActive = true;
-
     if (screen) query.screen = screen.toUpperCase();
     if (position) query.position = position.toUpperCase();
 
@@ -89,7 +80,6 @@ router.get('/', async (req, res) => {
     });
   }
 });
-
 
 // PUT /api/banners/:id
 router.put('/:id', async (req, res) => {
@@ -114,7 +104,6 @@ router.put('/:id', async (req, res) => {
 
     res.json({ success: true, data: banner });
   } catch (err) {
-    console.error('Update error:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to update banner',
@@ -122,7 +111,6 @@ router.put('/:id', async (req, res) => {
     });
   }
 });
-
 
 // DELETE /api/banners/:id
 router.delete('/:id', async (req, res) => {
@@ -142,6 +130,5 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
-
 
 module.exports = router;

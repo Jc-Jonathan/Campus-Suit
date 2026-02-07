@@ -18,6 +18,7 @@ type LoanApplication = {
   gender: string;
   status: 'pending' | 'approved' | 'rejected';
   amount: number;
+  interestRate?: number;
 };
 
 export const LoanApplicant = () => {
@@ -94,6 +95,9 @@ export const LoanApplicant = () => {
               </View>
             </View>
             <Text style={styles.amount}>${app.amount.toLocaleString()}</Text>
+            {app.interestRate !== undefined && app.interestRate !== null && (
+              <Text style={styles.interestRate}>{app.interestRate}% APR</Text>
+            )}
           </TouchableOpacity>
         ))
       )}
@@ -165,6 +169,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0d6efd',
     marginTop: 4,
+  },
+  interestRate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#28a745',
+    marginTop: 2,
   },
   noData: {
     textAlign: 'center',
