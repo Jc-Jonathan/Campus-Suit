@@ -51,7 +51,7 @@ app.use('/api/Banners', require('./routes/Banners'));
 app.use('/api/notifications', require('./routes/Notifications'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/userorders', require('./routes/UserOrders'));
-app.use('/api/cloudinary', require('./routes/cloudinary'));
+
 /* 🔹 Serve uploaded files */
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
