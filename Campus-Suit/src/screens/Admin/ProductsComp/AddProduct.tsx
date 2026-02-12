@@ -9,19 +9,22 @@ import {
   Alert,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigation';
+import { pickAndUploadProductImage } from '../../../utils/uploadProductImage';
 
 interface ProductData {
   name: string;
-  productType: string;    // ✅
-  productBrand: string;   // ✅
+  productType: string;    // 
+  productBrand: string;   // 
   description: string;
   imageUrl: string;
+  imagePublicId?: string;
   newPrice: string;
   oldPrice: string;
 }
@@ -36,29 +39,43 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
   const [product, setProduct] = useState<Omit<ProductData, 'id'>>({
     name: '',
     productType: '',
-  productBrand: '',
+    productBrand: '',
     description: '',
     imageUrl: '',
+    imagePublicId: '',
     newPrice: '',
     oldPrice: '',
   });
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
+
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photos to upload an image.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setProduct({ ...product, imageUrl: result.assets[0].uri });
+    try {
+      setUploading(true);
+      setUploadError(false);
+      console.log('📷 Starting product image selection...');
+      
+      const uploadResult = await pickAndUploadProductImage();
+      
+      if (uploadResult) {
+        console.log('✅ Product image uploaded to Cloudinary:', uploadResult.url);
+        setProduct({ 
+          ...product, 
+          imageUrl: uploadResult.url,
+          imagePublicId: uploadResult.publicId 
+        });
+        setUploadError(false);
+        Alert.alert('Success', 'Product image uploaded successfully!');
+      } else {
+        console.log('📷 Image selection cancelled');
+      }
+    } catch (error) {
+      console.error('❌ Error uploading product image:', error);
+      setUploadError(true);
+      Alert.alert('Upload Error', 'Failed to upload product image. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -69,7 +86,7 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
     }
 
     try {
-      const response = await fetch('http://192.168.31.130:5000/api/products/add', {
+      const response = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,6 +97,7 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
           productBrand: product.productBrand,
           description: product.description,
           imageUrl: product.imageUrl,
+          imagePublicId: product.imagePublicId,
           newPrice: Number(product.newPrice),
           oldPrice: product.oldPrice ? Number(product.oldPrice) : null,
         }),
@@ -180,8 +198,16 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Product Image</Text>
-          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-            {product.imageUrl ? (
+          <TouchableOpacity 
+            style={styles.imagePicker} 
+            onPress={pickImage}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+              </View>
+            ) : product.imageUrl ? (
               <Image source={{ uri: product.imageUrl }} style={styles.image} />
             ) : (
               <View style={styles.imagePlaceholder}>
@@ -190,6 +216,9 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
               </View>
             )}
           </TouchableOpacity>
+          {uploadError && (
+            <Text style={styles.errorText}>Please add image again</Text>
+          )}
         </View>
 
         <TouchableOpacity 
@@ -276,5 +305,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  uploadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  uploadingText: {
+    marginTop: 10,
+    color: '#666',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  errorText: {
+    marginTop: 8,
+    color: '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

@@ -43,7 +43,7 @@ export const StoreHomeScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filtersLoading, setFiltersLoading] = useState(true);
 
-  const API_URL = 'http://192.168.31.130:5000/api/products';
+  const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products';
 
   useEffect(() => {
     const fetchFilters = async () => {

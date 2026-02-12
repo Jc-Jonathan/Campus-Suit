@@ -14,10 +14,10 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: true,
-              headerTitle: "Exotic Store",
+              headerTitle: "-Lelean International-",
               headerTitleAlign: "center",
               headerStyle: { backgroundColor: theme.colors.primary, },
-              headerTitleStyle: { fontWeight: "bold", fontSize: 30, color: "#fff" },
+              headerTitleStyle: { fontWeight: "800", fontSize: 23, color: "#fff" },
             }}
           >
             {/* This points to app/index.tsx which renders MainTabs */}

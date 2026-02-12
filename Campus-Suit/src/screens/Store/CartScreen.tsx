@@ -1,28 +1,17 @@
-import React from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-
   View,
-
   Text,
-
   StyleSheet,
-
   Image,
-
   FlatList,
-
   TouchableOpacity,
-
   Platform,
-
-  StatusBar
-
+  StatusBar,
+  Alert
 } from 'react-native';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useCart } from '../../contexts/CartContext';
@@ -43,44 +32,95 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export const CartScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<StoreStackParamList>>();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { cart, incrementQty, removeFromCart, switchUser, currentUserId } = useCart();
 
+  // Handle checkout button press with authentication check
+  const handleCheckoutPress = () => {
+    if (!isLoggedIn || !user) {
+      Alert.alert(
+        'Authentication Required',
+        'Please sign in first to proceed to checkout.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('AuthFlow' as any),
+          },
+        ]
+      );
+      return;
+    }
+
+    // Check if user is admin
+    if (user.isAdmin) {
+      Alert.alert(
+        'Access Denied',
+        'Admin users cannot checkout. Please sign in as a regular user to proceed.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Sign In as User',
+            onPress: () => navigation.navigate('AuthFlow' as any),
+          },
+        ]
+      );
+      return;
+    }
+
+    // User is signed in and not admin, proceed to checkout
+    navigation.navigate('Checkout', { 
+      cartItems: displayCart, 
+      totalPrice: totalPrice, 
+      source: 'cart' as const 
+    });
+  };
+
   // Filter cart items to show only those belonging to the logged-in user
-  const userCart = currentUserId && user?.email 
+  const userCart = currentUserId && user?.email && !user.isAdmin
     ? cart.filter(item => {
-        // This assumes cart items are already filtered by user ID in CartContext
-        // If you need additional email filtering, you can add it here
-        return true;
+        // For logged-in students, show only their items
+        return true; // CartContext now handles filtering by user
       })
     : cart;
 
-  const totalItems = userCart.reduce((sum, i) => sum + i.quantity, 0);
-  const totalPrice = userCart.reduce(
+  // Show cart based on user type:
+  // - Guest users: show cart items (non-persistent)
+  // - Admin users: show empty cart
+  // - Student users: show their cart items (persistent)
+  const displayCart = user?.isAdmin ? [] : userCart;
+  
+  const totalItems = displayCart.reduce((sum, i) => sum + i.quantity, 0);
+  const totalPrice = displayCart.reduce(
     (sum, i) => sum + i.newPrice * i.quantity,
     0
   );
 
-  // Switch to logged-in user if not already switched
-  React.useEffect(() => {
-    if (user?.email && currentUserId && currentUserId !== user.email) {
-      switchUser(user.email);
-    }
-  }, [user?.email, currentUserId, switchUser]);
+  // CartContext now handles user switching automatically based on auth state
+  // No manual switchUser call needed here
 
   // Automatically refresh cart when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       // This will be called whenever the screen comes into focus
       // CartContext automatically handles cart persistence and loading
-      console.log('CartScreen focused - cart items:', userCart.length);
-    }, [userCart.length])
+      console.log('CartScreen focused - cart items:', displayCart.length);
+    }, [displayCart.length])
   );
 
   // Listen for cart changes in real-time (even when screen is not focused)
   React.useEffect(() => {
-    console.log('Cart updated in real-time - items:', userCart.length);
-  }, [cart, userCart.length]);
+    console.log('Cart updated in real-time - items:', displayCart.length);
+  }, [cart, displayCart.length]);
+
+  // CartContext now handles real-time updates automatically
+  // No manual AsyncStorage sync needed
 
 
 
@@ -92,6 +132,13 @@ export const CartScreen = () => {
 
         <View style={styles.header}>
 
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.navigate('StoreHome')}
+          >
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+
           <Text style={styles.title}>My Cart</Text>
 
           <Text style={styles.itemCount}>({totalItems} {totalItems === 1 ? 'item' : 'items'})</Text>
@@ -100,7 +147,7 @@ export const CartScreen = () => {
 
 
 
-        {userCart.length === 0 ? (
+        {displayCart.length === 0 ? (
 
           <View style={styles.emptyContainer}>
 
@@ -129,9 +176,7 @@ export const CartScreen = () => {
           <>
 
             <FlatList
-
-              data={userCart}
-
+              data={displayCart}
               keyExtractor={item => item.productId.toString()}
 
               showsVerticalScrollIndicator={false}
@@ -285,11 +330,7 @@ export const CartScreen = () => {
               <AppButton 
                 label="Proceed to Checkout" 
                 textStyle={styles.buttonText}
-                onPress={() => navigation.navigate('Checkout', { 
-                  cartItems: userCart, 
-                  totalPrice: totalPrice, 
-                  source: 'cart' as const 
-                })} 
+                onPress={handleCheckoutPress}
                 style={styles.checkoutButton}
               />
 
@@ -351,6 +392,11 @@ const styles = StyleSheet.create({
 
     marginBottom: 20,
 
+  },
+
+  backButton: {
+    marginRight: 12,
+    padding: 4,
   },
 
   title: {

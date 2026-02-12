@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Share,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import axios from 'axios';
@@ -28,7 +29,7 @@ type DetailItemProps = {
 const DetailItem = ({ label, value }: DetailItemProps) => (
   <View style={styles.detailItem}>
     <Text style={styles.detailLabel}>{label}</Text>
-    <Text style={styles.detailValue}>{value || 'N/A'}</Text>
+    <Text style={styles.detailValue}>{value !== null && value !== undefined ? value.toString() : 'N/A'}</Text>
   </View>
 );
 
@@ -59,7 +60,7 @@ export const LoanApplicantDetail = () => {
   const [downloading, setDownloading] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleDownload = async (url: string | null | undefined) => {
+  const handleDownload = async (url: string | null | undefined, documentName: string) => {
     if (!url) {
       Alert.alert('Error', 'Document URL is not available');
       return;
@@ -68,69 +69,85 @@ export const LoanApplicantDetail = () => {
     try {
       setLoading(true);
       
-      // Ensure the URL is absolute
+      // Ensure the URL is absolute and handle Cloudinary URLs
       let fileUrl = url;
       if (!url.startsWith('http')) {
         // If it's a relative path, prepend the base URL
-        fileUrl = `http://192.168.31.130:5000${url.startsWith('/') ? '' : '/'}${url}`;
+        fileUrl = `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev${url.startsWith('/') ? '' : '/'}${url}`;
       }
 
-      console.log('Attempting to open URL:', fileUrl);
+      console.log('📥 Downloading document:', documentName);
+      console.log('🔗 URL:', fileUrl);
       
-      // Check if the URL can be opened
-      const supported = await Linking.canOpenURL(fileUrl);
+      // Extract filename from URL for better user experience
+      const fileName = documentName || fileUrl.split('/').pop()?.split('?')[0] || 'document.pdf';
       
-      if (supported) {
-        // Open the URL in the default browser or appropriate app
-        await Linking.openURL(fileUrl);
-      } else {
-        // If direct opening fails, try to download it
-        Alert.alert(
-          'Open in Browser',
-          'Opening in your default browser...',
-          [
-            {
-              text: 'OK',
-              onPress: async () => {
-                try {
-                  await Linking.openURL(fileUrl);
-                } catch (browserError) {
-                  console.error('Error opening in browser:', browserError);
-                  Alert.alert('Error', 'Could not open the file. No app found to handle this file type.');
-                }
-              }
-            }
-          ]
-        );
-      }
-    } catch (error) {
-      console.error('Error handling download:', error);
+      // Show download options dialog
       Alert.alert(
-        'Download Error',
-        'Failed to open the file. You can try copying the URL and opening it in a web browser.\n\n' + 
-        'Make sure you are connected to the same network as the server and the server is running.',
+        'Download Document',
+        `Download "${fileName}"?`,
         [
-          { text: 'OK' },
+          {
+            text: 'Open in Browser',
+            onPress: async () => {
+              try {
+                console.log('🌐 Opening in browser:', fileUrl);
+                await Linking.openURL(fileUrl);
+              } catch (browserError) {
+                console.error('❌ Browser error:', browserError);
+                Alert.alert('Error', 'Could not open in browser. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Share Link',
+            onPress: async () => {
+              try {
+                console.log('📤 Sharing link:', fileUrl);
+                await Share.share({
+                  message: `Document: ${fileName}`,
+                  url: fileUrl,
+                  title: fileName,
+                });
+              } catch (shareError) {
+                console.error('❌ Share error:', shareError);
+                Alert.alert('Error', 'Could not share document link.');
+              }
+            },
+          },
           {
             text: 'Copy URL',
-            onPress: () => {
-              // Copy the URL to clipboard
-              // Note: You'll need to install and import the expo-clipboard package
-              // or use another clipboard solution
+            onPress: async () => {
               try {
-                const urlToCopy = url.startsWith('http') ? url : `http://192.168.31.130:5000${url}`;
-                // This is a placeholder - you'll need to implement clipboard functionality
-                // Clipboard.setString(urlToCopy);
-                Alert.alert('URL Copied', 'The document URL has been copied to your clipboard.');
+                console.log('📋 Copying URL:', fileUrl);
+                await Share.share({
+                  message: fileUrl,
+                  title: 'Document URL',
+                });
+                Alert.alert('Success', 'Document URL copied to clipboard!');
               } catch (copyError) {
-                console.error('Error copying URL:', copyError);
+                console.error('❌ Copy error:', copyError);
+                Alert.alert('Error', 'Could not copy URL.');
               }
-            }
-          }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Error handling download:', error);
+      Alert.alert(
+        'Download Error',
+        'Failed to process document. Please try again or contact support if the issue persists.',
+        [
+          { text: 'OK' }
         ]
       );
     } finally {
-      setDownloading(false);
+      setLoading(false);
     }
   };
 
@@ -145,9 +162,9 @@ export const LoanApplicantDetail = () => {
         setRejecting(true);
       }
       
-      // Update the status - the backend will handle email notification
+      // Update the status - backend will handle email notification
       const response = await axios.patch(
-        `http://192.168.31.130:5000/api/loanApplys/${application._id}`,
+        `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys/${application._id}`,
         { status: newStatus },
         {
           headers: { 'Content-Type': 'application/json' },
@@ -232,7 +249,7 @@ export const LoanApplicantDetail = () => {
             <Text style={[styles.statusText, {
               color: application.status === 'approved' ? '#155724' : 
                     application.status === 'rejected' ? '#721c24' : '#856404'
-            }]}>
+            }]} >
               {application.status?.charAt(0).toUpperCase() + application.status?.slice(1)}
             </Text>
           </View>
@@ -244,17 +261,17 @@ export const LoanApplicantDetail = () => {
           <DocumentItem 
             label="ID Document" 
             url={application.idDocumentUrl}
-            onPress={() => application.idDocumentUrl && handleDownload(application.idDocumentUrl)}
+            onPress={() => application.idDocumentUrl && handleDownload(application.idDocumentUrl, 'ID Document')}
           />
           <DocumentItem 
             label="School ID Document" 
             url={application.schoolIdDocumentUrl}
-            onPress={() => application.schoolIdDocumentUrl && handleDownload(application.schoolIdDocumentUrl)}
+            onPress={() => application.schoolIdDocumentUrl && handleDownload(application.schoolIdDocumentUrl, 'School ID Document')}
           />
           <DocumentItem 
             label="Agreement Document" 
             url={application.agreementDocumentUrl}
-            onPress={() => application.agreementDocumentUrl && handleDownload(application.agreementDocumentUrl)}
+            onPress={() => application.agreementDocumentUrl && handleDownload(application.agreementDocumentUrl, 'Agreement Document')}
           />
         </View>
       </ScrollView>

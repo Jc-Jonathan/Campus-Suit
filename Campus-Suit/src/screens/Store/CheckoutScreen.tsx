@@ -24,6 +24,7 @@ import { AppButton } from '../../components/AppButton';
 import { MaterialIcons, FontAwesome, Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/theme';
 import { uploadImage } from '../../utils/uploadImage';
+import { pickAndUploadPaymentProof } from '../../utils/uploadPaymentProof';
 
 interface CartItem {
   productId: number;
@@ -38,13 +39,13 @@ export const CheckoutScreen = ({ route }: any) => {
   const navigation = useNavigation<NativeStackNavigationProp<StoreStackParamList>>();
   const { cart, directCheckoutItems, clearDirectCheckout, clearCart, incrementQty, removeFromCart, incrementDirectCheckoutQty, removeFromDirectCheckout } = useCart();
   const { userId } = useAuth();
-  const { createShopNotification } = useNotifications();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentImage, setPaymentImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [qrBanner, setQrBanner] = useState<any>(null);
   const [isMapVisible, setIsMapVisible] = useState(false);
@@ -56,16 +57,17 @@ export const CheckoutScreen = ({ route }: any) => {
   const totalAmount = cartTotal + directCheckoutTotal;
 
   useEffect(() => {
-    fetch(`http://192.168.31.130:5000/api/auth/me/${userId}`)
+    fetch(`https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/me/${userId}`)
       .then(res => res.json())
       .then(user => {
         setEmail(user.email);
         setPhone(user.phoneCode + user.phoneNumber);
+        setName(user.name);
       });
   }, []);
 
  useEffect(() => {
-  fetch('http://192.168.31.130:5000/api/banners?screen=CHECKOUT&position=QR_PAYMENT')
+  fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/banners?screen=CHECKOUT&position=QR_PAYMENT')
     .then(res => res.json())
     .then(json => setQrBanner(json.data?.[0] || null))
     .catch(console.error);
@@ -74,21 +76,24 @@ export const CheckoutScreen = ({ route }: any) => {
 
   const pickImage = async () => {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!res.canceled && res.assets && res.assets[0].uri) {
-        setIsUploading(true);
-        const uploadUrl = await uploadImage(res.assets[0].uri);
-        setPaymentImage(uploadUrl);
+      setIsUploading(true);
+      setUploadError(false);
+      console.log('📷 Starting payment proof selection...');
+      
+      const uploadResult = await pickAndUploadPaymentProof();
+      
+      if (uploadResult) {
+        console.log('✅ Payment proof uploaded to Cloudinary:', uploadResult.url);
+        setPaymentImage(uploadResult.url);
+        setUploadError(false);
+        Alert.alert('Success', 'Payment proof uploaded successfully!');
+      } else {
+        console.log('📷 Payment proof selection cancelled');
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      console.error('❌ Error uploading payment proof:', error);
+      setUploadError(true);
+      Alert.alert('Upload Error', 'Failed to upload payment proof. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -169,7 +174,7 @@ export const CheckoutScreen = ({ route }: any) => {
       const subtotal = totalAmount;
 
       // Send order to backend
-      const response = await fetch('http://192.168.31.130:5000/api/userOrders', {
+      const response = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/userOrders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,14 +192,6 @@ export const CheckoutScreen = ({ route }: any) => {
       const result = await response.json();
 
       if (response.ok) {
-        // Create shop notification
-        await createShopNotification(
-          name.trim(),
-          email,
-          orderItems,
-          totalAmount
-        );
-
         // Clear both cart and direct checkout items after successful order
         clearDirectCheckout();
         clearCart();
@@ -316,14 +313,9 @@ export const CheckoutScreen = ({ route }: any) => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
-        <View style={styles.inputContainer}>
+        <View style={styles.infoRow}>
           <MaterialIcons name="person" size={20} color={colors.primary} />
-          <TextInput
-            style={[styles.input, styles.nameInput]}
-            placeholder="Enter your full name"
-            value={name}
-            onChangeText={setName}
-          />
+          <Text style={styles.infoText}>{name}</Text>
         </View>
         <View style={styles.infoRow}>
           <MaterialIcons name="email" size={20} color={colors.primary} />
@@ -407,7 +399,11 @@ export const CheckoutScreen = ({ route }: any) => {
           onPress={pickImage}
           disabled={isUploading}
         >
-          {paymentImage ? (
+          {isUploading ? (
+            <View style={styles.uploadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : paymentImage ? (
             <Image 
               source={{ uri: paymentImage }}
               style={styles.previewImage}
@@ -426,6 +422,9 @@ export const CheckoutScreen = ({ route }: any) => {
             </View>
           )}
         </TouchableOpacity>
+        {uploadError && (
+          <Text style={styles.errorText}>Please add image again</Text>
+        )}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -707,6 +706,18 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+  },
+  uploadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 8,
+    color: '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   buttonContainer: {
     marginTop: 8,

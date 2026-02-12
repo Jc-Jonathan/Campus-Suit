@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { AppButton } from './AppButton';
@@ -20,12 +20,14 @@ interface Props {
   label?: string;
   onDocumentPicked: (file: PickedFile | null) => void;
   value?: string | null;
+  loading?: boolean;
 }
 
 export const DocumentPickerButton: React.FC<Props> = ({ 
   label = 'Upload document',
   onDocumentPicked,
-  value
+  value,
+  loading = false
 }) => {
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -66,13 +68,19 @@ export const DocumentPickerButton: React.FC<Props> = ({
       }
     } catch (error) {
       console.error('Error picking document:', error);
-      alert('Error picking document. Please try again.');
+      Alert.alert('Document Error', 'Error picking document. Please try again.');
     }
   };
 
   return (
     <View style={styles.container}>
-      <AppButton label={label} onPress={handlePick} variant="outline" />
+      <AppButton 
+        label={loading ? 'Uploading...' : label} 
+        onPress={handlePick} 
+        variant="outline" 
+        disabled={loading}
+        loading={loading}
+      />
       <View style={styles.row}>
         <Ionicons name="document-text-outline" size={18} color={theme.colors.textMuted} />
         <Text style={styles.text} numberOfLines={1} ellipsizeMode="middle">

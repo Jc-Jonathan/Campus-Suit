@@ -16,12 +16,14 @@ import { Picker } from '@react-native-picker/picker';
 import { theme } from '../../theme/theme';
 import { uploadImage } from '../../utils/uploadImage';
 
-const API_BASE = 'http://192.168.31.130:5000';
+const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export const AdminBanners: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [publicId, setPublicId] = useState<string | null>(null);
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [screen, setScreen] = useState('HOME');
   const [position, setPosition] = useState('CAROUSEL');
   const [priority, setPriority] = useState('1');
@@ -60,14 +62,12 @@ export const AdminBanners: React.FC = () => {
       });
 
       if (!result.canceled && result.assets[0]?.uri) {
-        setLoading(true);
-        const url = await uploadImage(result.assets[0].uri);
-        setImageUrl(url);
+        // ✅ Store local URI, upload only when Save is pressed
+        setLocalImageUri(result.assets[0].uri);
+        setImageUrl(result.assets[0].uri); // Show preview
       }
     } catch {
-      Alert.alert('Error', 'Image upload failed');
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Image selection failed');
     }
   };
 
@@ -90,7 +90,7 @@ const bannerExists = () => {
   // SAVE / UPDATE BANNER
   // =========================
   const saveBanner = async () => {
-    if (!imageUrl) {
+    if (!localImageUri) {
       Alert.alert('Validation', 'Please upload a banner image');
       return;
     }
@@ -107,6 +107,9 @@ const bannerExists = () => {
     try {
       setLoading(true);
 
+      // ✅ Upload to Cloudinary only when Save is pressed
+      const cloudinaryUrl = await uploadImage(localImageUri);
+      
       const url = editingId
         ? `${API_BASE}/api/banners/${editingId}`
         : `${API_BASE}/api/banners`;
@@ -117,7 +120,8 @@ const bannerExists = () => {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl,
+          imageUrl: cloudinaryUrl,
+          publicId: 'generated_by_backend', // Backend will set this
           screen,
           position,
           priority: Number(priority),
@@ -189,6 +193,8 @@ const bannerExists = () => {
   const resetForm = () => {
     setEditingId(null);
     setImageUrl(null);
+    setPublicId(null);
+    setLocalImageUri(null);
     setScreen('HOME');
     setPosition('CAROUSEL');
     setPriority('1');

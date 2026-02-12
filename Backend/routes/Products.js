@@ -26,6 +26,7 @@ router.post('/add', async (req, res) => {
       productBrand,
       description,
       imageUrl,
+      imagePublicId,
       newPrice,
       oldPrice,
     } = req.body;
@@ -50,18 +51,24 @@ router.post('/add', async (req, res) => {
       productBrand,
       description,
       imageUrl,
+      imagePublicId,
       newPrice,
       oldPrice,
     });
 
     await product.save();
 
+    console.log('✅ Product added with Cloudinary URL:', imageUrl);
+    if (imagePublicId) {
+      console.log('🆔 Cloudinary Public ID:', imagePublicId);
+    }
+
     res.status(201).json({
       message: 'Product added successfully',
       product,
     });
   } catch (error) {
-    console.error(error);
+    console.error('❌ Error adding product:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

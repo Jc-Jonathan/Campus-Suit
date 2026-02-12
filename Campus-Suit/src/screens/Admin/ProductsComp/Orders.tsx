@@ -76,6 +76,38 @@ export const Orders: React.FC = () => {
     setExpandedOrders(newExpanded);
   };
 
+  const handleDeleteOrder = (orderId: number) => {
+    Alert.alert(
+      'Delete Order',
+      `Are you sure you want to delete Order #${orderId}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => confirmDeleteOrder(orderId),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteOrder = async (orderId: number) => {
+    try {
+      await orderAPI.deleteOrder(orderId);
+      
+      // Remove order from local state
+      setOrders(orders.filter(order => order.orderId !== orderId));
+      
+      Alert.alert('Success', `Order #${orderId} has been deleted successfully.`);
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      Alert.alert('Error', 'Failed to delete order. Please try again.');
+    }
+  };
+
   const renderOrderRow = (order: Order) => (
     <TouchableOpacity 
       key={order.orderId} 
@@ -143,6 +175,14 @@ export const Orders: React.FC = () => {
           <Text style={styles.statusText}>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</Text>
         </View>
       </View>
+      <View style={[styles.orderCell, { width: 60 }]}>
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => handleDeleteOrder(order.orderId)}
+        >
+          <Ionicons name="trash-bin" size={20} color="#e74c3c" />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 
@@ -194,6 +234,9 @@ export const Orders: React.FC = () => {
               </View>
               <View style={[styles.headerCell, { width: 80 }]}>
                 <Text style={styles.headerText}>Status</Text>
+              </View>
+              <View style={[styles.headerCell, { width: 60 }]}>
+                <Text style={styles.headerText}>Action</Text>
               </View>
             </View>
             
@@ -327,5 +370,11 @@ const styles = StyleSheet.create({
   },
   verticalScroll: {
     flex: 1,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

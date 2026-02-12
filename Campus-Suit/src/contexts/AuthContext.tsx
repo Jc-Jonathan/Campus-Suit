@@ -37,16 +37,18 @@ export const AuthProvider = ({ children }: any) => {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const [storedUserId, storedUserEmail, adminEmail, token] = await Promise.all([
+        const [storedMongoUserId, storedUserId, storedUserEmail, adminEmail, token] = await Promise.all([
+          AsyncStorage.getItem('mongoUserId'),
           AsyncStorage.getItem('userId'),
           AsyncStorage.getItem('userEmail'),
           AsyncStorage.getItem('adminEmail'),
           AsyncStorage.getItem('userToken')
         ]);
 
-if (storedUserId && storedUserEmail) {
+if (storedMongoUserId && storedUserId && storedUserEmail) {
   const id = Number(storedUserId);
   setUser({
+    _id: storedMongoUserId,
     userId: id,
     email: storedUserEmail,
     role: 'student',

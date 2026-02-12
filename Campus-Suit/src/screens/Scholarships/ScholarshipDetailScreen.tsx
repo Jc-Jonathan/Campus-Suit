@@ -13,7 +13,7 @@ import { CommonActions } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
 import { MainStackParamList } from '../../navigation/MainStack';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,7 +23,7 @@ export type ScholarshipDetailProps = NativeStackScreenProps<
   'ScholarshipDetail'
 >;
 
-const BASE_URL = 'http://192.168.31.130:5000';
+const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
   route,
@@ -79,6 +79,31 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
       return;
     }
 
+    // Check if user is admin
+    if (user.isAdmin) {
+      Alert.alert(
+        'Access Denied',
+        'Admin users cannot apply for scholarships. Please sign in as a regular user to proceed.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Sign In as User',
+            onPress: () =>
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
+                })
+              ),
+          },
+        ]
+      );
+      return;
+    }
+
     navigation.navigate('ScholarshipApply', {
       scholarshipId: scholarship._id,
       scholarshipTitle: scholarship.title,
@@ -91,12 +116,30 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
       return;
     }
 
-    Alert.alert('Download Course List', 'Proceed with download?', [
+    const fileUrl = scholarship.courseFileUrl;
+    const fileName = fileUrl.split('/').pop()?.split('?')[0] || 'Course-List.pdf';
+
+    Alert.alert('Download Course List', `Download ${fileName}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Download',
-        onPress: () =>
-          Linking.openURL(`${BASE_URL}${scholarship.courseFileUrl}`),
+        onPress: async () => {
+          try {
+            console.log(`📥 Downloading course list: ${fileName}`);
+            console.log(`🔗 URL: ${fileUrl}`);
+            
+            // For Cloudinary URLs, open directly
+            // For local URLs, construct with BASE_URL
+            const downloadUrl = fileUrl.includes('cloudinary.com') 
+              ? fileUrl 
+              : `${BASE_URL}${fileUrl}`;
+            
+            await Linking.openURL(downloadUrl);
+          } catch (error) {
+            console.error('❌ Error opening download URL:', error);
+            Alert.alert('Error', 'Could not open file for download');
+          }
+        },
       },
     ]);
   };
@@ -113,7 +156,6 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
     return (
       <View style={styles.container}>
         <HeaderTab />
-        <Header title="Scholarship" />
         <Text style={styles.muted}>Scholarship not found.</Text>
       </View>
     );
@@ -122,8 +164,7 @@ export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title={scholarship.title} subtitle="Scholarship Details" />
-
+      <Text style={styles.pageTitle}>Scholarship Details</Text>
       <ScrollView contentContainerStyle={styles.content}>
         {/* AMOUNT CARD */}
         <View style={styles.amountCard}>
@@ -184,6 +225,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: theme.spacing.md,
+    marginTop: 1,
   },
 
   content: {

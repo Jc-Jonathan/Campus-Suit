@@ -54,12 +54,17 @@ const ScholarshipApplicationSchema = new mongoose.Schema(
       default: 'pending',
     },
 
-    // Document URLs
+    // Document URLs and Cloudinary Public IDs
     nationalIdUrl: String,
+    nationalIdPublicId: String,
     transcriptUrl: String,
+    transcriptPublicId: String,
     recommendationUrl: String,
+    recommendationPublicId: String,
     enrollmentProofUrl: String,
+    enrollmentProofPublicId: String,
     otherDocumentUrl: String,
+    otherDocumentPublicId: String,
   },
   { timestamps: true }
 );

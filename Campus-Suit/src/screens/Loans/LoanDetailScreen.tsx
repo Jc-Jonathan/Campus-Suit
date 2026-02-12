@@ -12,10 +12,11 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { AppButton } from '../../components/AppButton';
 import { CommonActions } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
@@ -29,7 +30,7 @@ export type LoanDetailProps = NativeStackScreenProps<
 >;
 
 const { width } = Dimensions.get('window');
-const API_BASE = 'http://192.168.31.130:5000';
+const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
   route,
@@ -40,6 +41,7 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
 
   const [loan, setLoan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [heroImages, setHeroImages] = useState<any[]>([]);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
 
@@ -84,17 +86,123 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
       return;
     }
 
+    // Check if user is admin
+    if (user.isAdmin) {
+      Alert.alert(
+        'Access Denied',
+        'Admin users cannot apply for loans. Please sign in as a regular user to proceed.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Sign In as User',
+            onPress: () =>
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'AuthFlow' as keyof MainStackParamList }],
+                })
+              ),
+          },
+        ]
+      );
+      return;
+    }
+
     navigation.navigate('LoanApply', { id: loan.loanId });
   };
 
   const downloadDocument = async () => {
     if (!loan?.documentUrl) {
-      Alert.alert('No document available');
+      Alert.alert('No document available', 'Loan form document is not available for this loan.');
       return;
     }
 
-    const url = `${API_BASE}${loan.documentUrl}`;
-    Linking.openURL(url);
+    try {
+      setDownloading(true);
+      
+      // Ensure the URL is absolute and handle Cloudinary URLs
+      let fileUrl = loan.documentUrl;
+      if (!loan.documentUrl.startsWith('http')) {
+        // If it's a relative path, prepend the base URL
+        fileUrl = `${API_BASE}${loan.documentUrl.startsWith('/') ? '' : '/'}${loan.documentUrl}`;
+      }
+
+      console.log('📥 Downloading loan form:', loan.title);
+      console.log('🔗 URL:', fileUrl);
+      
+      // Extract filename from URL for better user experience
+      const fileName = `${loan.title} - Loan Form` || fileUrl.split('/').pop()?.split('?')[0] || 'loan-form.pdf';
+      
+      // Show download options dialog
+      Alert.alert(
+        'Download Loan Form',
+        `Download "${fileName}"?`,
+        [
+          {
+            text: 'Open in Browser',
+            onPress: async () => {
+              try {
+                console.log('🌐 Opening in browser:', fileUrl);
+                await Linking.openURL(fileUrl);
+              } catch (browserError) {
+                console.error('❌ Browser error:', browserError);
+                Alert.alert('Error', 'Could not open in browser. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Share Link',
+            onPress: async () => {
+              try {
+                console.log('📤 Sharing link:', fileUrl);
+                await Share.share({
+                  message: `Loan Form: ${fileName}`,
+                  url: fileUrl,
+                  title: fileName,
+                });
+              } catch (shareError) {
+                console.error('❌ Share error:', shareError);
+                Alert.alert('Error', 'Could not share loan form link.');
+              }
+            },
+          },
+          {
+            text: 'Copy URL',
+            onPress: async () => {
+              try {
+                console.log('📋 Copying URL:', fileUrl);
+                await Share.share({
+                  message: fileUrl,
+                  title: 'Loan Form URL',
+                });
+                Alert.alert('Success', 'Loan form URL copied to clipboard!');
+              } catch (copyError) {
+                console.error('❌ Copy error:', copyError);
+                Alert.alert('Error', 'Could not copy URL.');
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Error handling download:', error);
+      Alert.alert(
+        'Download Error',
+        'Failed to process loan form. Please try again or contact support if the issue persists.',
+        [
+          { text: 'OK' }
+        ]
+      );
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading) {
@@ -109,7 +217,6 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
     return (
       <View style={styles.container}>
         <HeaderTab />
-        <Header title="Loan" />
         <Text style={styles.muted}>Loan not found</Text>
       </View>
     );
@@ -118,7 +225,6 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title="Loan Details" />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* TITLE */}
@@ -161,7 +267,12 @@ export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
 
         {/* ACTIONS */}
         <View style={styles.actionBox}>
-          <AppButton label="Download Loan Form" onPress={downloadDocument} variant="outline" />
+          <AppButton 
+            label={downloading ? "Downloading..." : "Download Loan Form"} 
+            onPress={downloadDocument} 
+            variant="outline"
+            disabled={downloading}
+          />
           <View style={{ height: 12 }} />
           <AppButton label="Apply for this Loan" onPress={handleApplyLoan} />
         </View>

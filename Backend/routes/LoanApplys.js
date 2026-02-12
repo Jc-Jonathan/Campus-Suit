@@ -12,67 +12,49 @@ router.use(bodyParser.urlencoded({ extended: true }));
 // Parse application/json
 router.use(bodyParser.json());
 
-/* ================= MULTER CONFIG ================= */
-
-// Use path.join for cross-platform compatibility
-const uploadDir = path.join('public', 'uploads', 'loans');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadDir),
-  filename: (_, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  }
+// Configure multer for parsing FormData without files (like we did for scholarships)
+const uploadNone = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_, file, cb) => {
-    const allowed = /jpeg|jpg|png|pdf|doc|docx/;
-    const valid =
-      allowed.test(path.extname(file.originalname).toLowerCase()) &&
-      allowed.test(file.mimetype);
-
-    cb(valid ? null : new Error('Invalid file type'), valid);
-  }
-});
-
-const uploadFiles = upload.fields([
-  { name: 'idDocument', maxCount: 1 },
-  { name: 'schoolIdDocument', maxCount: 1 },
-  { name: 'agreementDocument', maxCount: 1 }
-]);
 
 /* ================= APPLY FOR LOAN ================= */
 
-router.post('/', uploadFiles, async (req, res) => {
+router.post('/', uploadNone.none(), async (req, res) => {
   try {
-    console.log('Raw request body:', req.body);
-    console.log('Request files:', req.files);
+    console.log('📝 Processing loan application');
+    console.log('📋 Request body:', req.body);
 
-    // For FormData, the fields might be in req.body directly
-    const formData = req.body;
-    
     // Extract all fields with proper fallbacks
-    const fullName = formData.fullName || '';
-    const dob = formData.dob || '';
-    const gender = formData.gender || '';
-    const phone = formData.phone || '';
-    const email = formData.email || '';
-    const studentId = formData.studentId || '';
-    const homeAddress = formData.homeAddress || '';
-    const program = formData.program || '';
-    const yearOfStudy = formData.yearOfStudy || '';
-    const loanTitle = formData.loanTitle || '';
-    const amount = formData.amount || 0;
-    const repaymentPeriod = formData.repaymentPeriod || '';
-    const purpose = formData.purpose || '';
-    const interestRate = formData.interestRate || 0;
-    const signature = formData.signature || '';
+    const fullName = req.body.fullName || '';
+    const dob = req.body.dob || '';
+    const gender = req.body.gender || '';
+    const phone = req.body.phone || '';
+    const email = req.body.email || '';
+    const studentId = req.body.studentId || '';
+    const homeAddress = req.body.homeAddress || '';
+    const program = req.body.program || '';
+    const yearOfStudy = req.body.yearOfStudy || '';
+    const loanTitle = req.body.loanTitle || '';
+    const amount = req.body.amount || 0;
+    const repaymentPeriod = req.body.repaymentPeriod || '';
+    const purpose = req.body.purpose || '';
+    const interestRate = req.body.interestRate || 0;
+    const signature = req.body.signature || '';
+
+    // Handle Cloudinary URLs from frontend
+    let idDocumentUrl = req.body.idDocumentUrl || null;
+    let idDocumentPublicId = req.body.idDocumentPublicId || '';
+    let schoolIdDocumentUrl = req.body.schoolIdDocumentUrl || null;
+    let schoolIdDocumentPublicId = req.body.schoolIdDocumentPublicId || '';
+    let agreementDocumentUrl = req.body.agreementDocumentUrl || null;
+    let agreementDocumentPublicId = req.body.agreementDocumentPublicId || '';
+
+    console.log('🔍 Received Cloudinary URLs:');
+    console.log('  National ID:', idDocumentUrl);
+    console.log('  School ID:', schoolIdDocumentUrl);
+    console.log('  Agreement:', agreementDocumentUrl);
+
     // Convert various truthy values to boolean
     const toBoolean = (value) => {
       if (value === undefined || value === null) return false;
@@ -83,9 +65,9 @@ router.post('/', uploadFiles, async (req, res) => {
       return Boolean(value);
     };
 
-    const confirmAccurate = toBoolean(formData.confirmAccurate);
-    const agreeTerms = toBoolean(formData.agreeTerms);
-    const understandRisk = toBoolean(formData.understandRisk);
+    const confirmAccurate = toBoolean(req.body.confirmAccurate);
+    const agreeTerms = toBoolean(req.body.agreeTerms);
+    const understandRisk = toBoolean(req.body.understandRisk);
 
     console.log('Processed form data:', {
       fullName,
@@ -105,26 +87,11 @@ router.post('/', uploadFiles, async (req, res) => {
       signature: signature ? '[SIGNATURE PRESENT]' : 'Not provided',
       confirmAccurate,
       agreeTerms,
-      understandRisk
+      understandRisk,
+      idDocumentUrl,
+      schoolIdDocumentUrl,
+      agreementDocumentUrl
     });
-
-
-    // ✅ CORRECT FILE URL MAPPING
-    let idDocumentUrl = null;
-    let schoolIdDocumentUrl = null;
-    let agreementDocumentUrl = null;
-
-    if (req.files?.idDocument?.[0]) {
-      idDocumentUrl = `/uploads/loans/${req.files.idDocument[0].filename}`;
-    }
-
-    if (req.files?.schoolIdDocument?.[0]) {
-      schoolIdDocumentUrl = `/uploads/loans/${req.files.schoolIdDocument[0].filename}`;
-    }
-
-    if (req.files?.agreementDocument?.[0]) {
-      agreementDocumentUrl = `/uploads/loans/${req.files.agreementDocument[0].filename}`;
-    }
 
     const loanApplication = new LoanApply({
       fullName,
@@ -143,10 +110,13 @@ router.post('/', uploadFiles, async (req, res) => {
       interestRate: Number(interestRate),
 
       // 
-      // ✅ SAVE URLS DIRECTLY
+      // ✅ SAVE CLOUDINARY URLS
       idDocumentUrl,
+      idDocumentPublicId,
       schoolIdDocumentUrl,
+      schoolIdDocumentPublicId,
       agreementDocumentUrl,
+      agreementDocumentPublicId,
 
       signature: signature || undefined,
       confirmAccurate: confirmAccurate === 'true',

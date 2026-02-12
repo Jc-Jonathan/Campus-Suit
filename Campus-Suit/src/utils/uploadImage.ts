@@ -1,27 +1,32 @@
-import * as FileSystem from 'expo-file-system';
+const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export const uploadImage = async (uri: string): Promise<string> => {
   try {
-    // In a real app, you would upload the image to your server here
-    // and return the URL of the uploaded image
-    // For now, we'll just return the local URI
-    return uri;
-    
-    // Example implementation with a real backend:
-    /*
-    const uploadResponse = await FileSystem.uploadAsync(
-      'YOUR_UPLOAD_ENDPOINT',
+    // ✅ Upload to Cloudinary via backend using FormData
+    const formData = new FormData();
+    formData.append('image', {
       uri,
-      {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'file',
-      }
-    );
+      type: 'image/jpeg',
+      name: 'banner.jpg',
+    } as any);
 
-    const result = JSON.parse(uploadResponse.body);
-    return result.url; // URL of the uploaded image
-    */
+    const response = await fetch(`${API_BASE}/api/banners/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Upload failed');
+    }
+    
+    // ✅ Return Cloudinary URL
+    return result.imageUrl;
+    
   } catch (error) {
     console.error('Error uploading image:', error);
     throw new Error('Failed to upload image');

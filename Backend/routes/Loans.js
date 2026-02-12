@@ -6,91 +6,80 @@ const fs = require('fs');
 const Loan = require('../models/Loan');
 const getNextLoanId = require('../Utils/getNextLoanId');
 
-// =======================
-// UPLOAD CONFIG
-// =======================
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadDir),
-  filename: (_, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
+// Configure multer for parsing FormData without files (like we did for scholarships)
+const uploadNone = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_, file, cb) => {
-    const allowed = /jpeg|jpg|png|pdf|doc|docx/;
-    const ok =
-      allowed.test(path.extname(file.originalname).toLowerCase()) &&
-      allowed.test(file.mimetype);
-    cb(ok ? null : new Error('Invalid file type'), ok);
-  },
-}).single('document');
 
 // =======================
 // CREATE LOAN
 // =======================
-router.post('/', (req, res) => {
-  upload(req, res, async err => {
-    try {
-      if (err) return res.status(400).json({ message: err.message });
+router.post('/', uploadNone.none(), async (req, res) => {
+  try {
+    console.log('📝 Creating new loan');
+    console.log('📋 Request body:', req.body);
+    
+    const {
+      title,
+      description,
+      minAmount,
+      maxAmount,
+      interestRate,
+      repaymentPeriod,
+      eligibility,
+      requiredDocuments,
+      applicationDeadline,
+      processingTime,
+      benefits,
+      documentUrl,
+      documentPublicId,
+    } = req.body;
 
-      const {
-        title,
-        description,
-        minAmount,
-        maxAmount,
-        interestRate,
-        repaymentPeriod,
-        eligibility,
-        requiredDocuments,
-        applicationDeadline,
-        processingTime,
-        benefits,
-      } = req.body;
-
-      if (
-        !title ||
-        !description ||
-        !minAmount ||
-        !maxAmount ||
-        !interestRate ||
-        !repaymentPeriod
-      ) {
-        if (req.file) fs.unlinkSync(req.file.path);
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-
-      const loanId = await getNextLoanId();
-
-      const loan = new Loan({
-        loanId,
-        title,
-        description,
-        minAmount: Number(minAmount),
-        maxAmount: Number(maxAmount),
-        interestRate: Number(interestRate),
-        repaymentPeriod,
-        eligibility: eligibility || '',
-        requiredDocuments: requiredDocuments || '',
-        applicationDeadline: applicationDeadline || '',
-        processingTime: processingTime || '',
-        benefits: benefits || '',
-        documentUrl: req.file ? `/uploads/${req.file.filename}` : '',
-      });
-
-      await loan.save();
-      res.status(201).json(loan);
-    } catch (error) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      res.status(500).json({ message: 'Server error' });
+    if (
+      !title ||
+      !description ||
+      !minAmount ||
+      !maxAmount ||
+      !interestRate ||
+      !repaymentPeriod
+    ) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
-  });
+
+    const loanId = await getNextLoanId();
+
+    // Handle Cloudinary URL from frontend
+    let documentUrlFinal = documentUrl || '';
+    let documentPublicIdFinal = documentPublicId || '';
+
+    console.log('🔍 Received Cloudinary URL:', documentUrlFinal);
+    console.log('🆔 Received Public ID:', documentPublicIdFinal);
+
+    const loan = new Loan({
+      loanId,
+      title,
+      description,
+      minAmount: Number(minAmount),
+      maxAmount: Number(maxAmount),
+      interestRate: Number(interestRate),
+      repaymentPeriod,
+      eligibility: eligibility || '',
+      requiredDocuments: requiredDocuments || '',
+      applicationDeadline: applicationDeadline || '',
+      processingTime: processingTime || '',
+      benefits: benefits || '',
+      documentUrl: documentUrlFinal,
+      documentPublicId: documentPublicIdFinal,
+    });
+
+    await loan.save();
+    console.log('✅ Loan created successfully with Cloudinary URL');
+    res.status(201).json(loan);
+  } catch (error) {
+    console.error('Error creating loan:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // =======================
@@ -126,15 +115,38 @@ router.get('/loan/:loanId', async (req, res) => {
 // =======================
 // UPDATE LOAN (NO FILE)
 // =======================
-router.put('/:loanId', async (req, res) => {
-  const loan = await Loan.findOneAndUpdate(
-    { loanId: req.params.loanId },
-    req.body,
-    { new: true }
-  );
+router.put('/:loanId', uploadNone.none(), async (req, res) => {
+  try {
+    console.log(`📝 Updating loan: ${req.params.loanId}`);
+    console.log('📋 Request body:', req.body);
+    
+    const updateData = { ...req.body };
+    
+    // Handle Cloudinary URL from frontend
+    let documentUrlFinal = req.body.documentUrl || '';
+    let documentPublicIdFinal = req.body.documentPublicId || '';
+    
+    if (documentUrlFinal) {
+      updateData.documentUrl = documentUrlFinal;
+      updateData.documentPublicId = documentPublicIdFinal;
+      console.log(`📄 Using Cloudinary URL from frontend: ${documentUrlFinal}`);
+      console.log(`🆔 Public ID: ${documentPublicIdFinal}`);
+    }
 
-  if (!loan) return res.status(404).json({ message: 'Loan not found' });
-  res.json(loan);
+    const loan = await Loan.findOneAndUpdate(
+      { loanId: req.params.loanId },
+      updateData,
+      { new: true }
+    );
+
+    if (!loan) return res.status(404).json({ message: 'Loan not found' });
+    
+    console.log('✅ Loan updated successfully');
+    res.json(loan);
+  } catch (error) {
+    console.error('Error updating loan:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // =======================

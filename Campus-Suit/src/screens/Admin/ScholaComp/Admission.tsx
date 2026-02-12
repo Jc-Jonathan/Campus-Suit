@@ -11,7 +11,7 @@ import {
 import axios from 'axios';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const API_URL = 'http://192.168.31.130:5000/api/scholarshipApplications';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
 
 const Admission = () => {
   const [apps, setApps] = useState<any[]>([]);

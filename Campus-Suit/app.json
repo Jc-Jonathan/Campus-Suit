@@ -1,50 +1,43 @@
 {
   "expo": {
-    "name": "Exotic Store",
+    "name": "Lelean-International",
     "slug": "Campus-Suit",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "campussuit",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "icon": "./assets/images/scholarship.jpg",
+    "icon": "./assets/images/logo.png",
+
     "ios": {
       "supportsTablet": true
     },
+
     "android": {
-  "usesCleartextTraffic": true,
-  "adaptiveIcon": {
-    "backgroundColor": "#0080FF",
-    "foregroundImage": "./assets/images/android-icon-foreground.png",
-    "backgroundImage": "./assets/images/scholarship.jpg",
-    "monochromeImage": "./assets/images/android-icon-monochrome.png"
-  },
-  "edgeToEdgeEnabled": true,
-  "predictiveBackGestureEnabled": false
-},
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#0080FF"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
 
     "web": {
       "output": "static",
-      "favicon": "./assets/images/scholarship.jpg"
+      "favicon": "./assets/images/logo.png"
     },
+
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/scholarship.jpg",
-          "imageWidth": 200,
+          "image": "./assets/images/logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0080FF",
-          "dark": {
-            "backgroundColor": "#0080FF"
-          }
+          "backgroundColor": "#0080FF"
         }
       ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    ]
   }
 }

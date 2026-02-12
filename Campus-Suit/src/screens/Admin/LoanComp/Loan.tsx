@@ -18,10 +18,11 @@ import { theme } from '../../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from '@react-navigation/native';
+import { uploadLoanAdminDocumentToCloudinary, UploadedLoanAdminDocument } from '../../../utils/uploadLoanAdminDocument';
 
 type DocumentResult = DocumentPickerAsset | null;
 
-const API_URL = 'http://192.168.31.130:5000/api/loans';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loans';
 
 export const Loan = () => {
   const [title, setTitle] = useState('');
@@ -29,8 +30,9 @@ export const Loan = () => {
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
-  const [document, setDocument] = useState<DocumentResult>(null);
+  const [document, setDocument] = useState<UploadedLoanAdminDocument | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
  const [repaymentValue, setRepaymentValue] = useState('');
 const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'DAY' |'WEEK' | 'MONTH' | 'YEAR'>('MONTH');
   const [eligibility, setEligibility] = useState('');
@@ -80,7 +82,27 @@ const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'
       });
 
       if (result.assets && result.assets.length > 0) {
-        setDocument(result.assets[0]);
+        const pickedFile = result.assets[0];
+        
+        // Convert to UploadedLoanAdminDocument format
+        const uploadedFile: UploadedLoanAdminDocument = {
+          uri: pickedFile.uri,
+          name: pickedFile.name,
+          type: pickedFile.mimeType || 'application/pdf',
+          size: pickedFile.size || 0,
+        };
+
+        try {
+          setUploadingDocument(true);
+          const cloudinaryFile = await uploadLoanAdminDocumentToCloudinary(uploadedFile);
+          setDocument(cloudinaryFile);
+          console.log('✅ Document uploaded to Cloudinary:', cloudinaryFile.cloudinaryUrl);
+        } catch (error) {
+          console.error('❌ Failed to upload to Cloudinary:', error);
+          Alert.alert('Upload Error', 'Failed to upload document to Cloudinary. Please try again.');
+        } finally {
+          setUploadingDocument(false);
+        }
       }
     } catch (err) {
       console.log('Error picking document:', err);
@@ -126,16 +148,14 @@ const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'
     if (processingTime) formData.append('processingTime', processingTime);
     if (benefits) formData.append('benefits', benefits);
 
-    // Append the document
-    if (document) {
-      // Create a file object for the document
-      const file = {
-        uri: document.uri,
-        type: document.mimeType || 'application/octet-stream',
-        name: document.name || 'document',
-      } as any;
-
-      formData.append('document', file);
+    // Send Cloudinary URL if document was uploaded
+    if (document && document.cloudinaryUrl) {
+      console.log('📤 Sending Cloudinary URL:', document.cloudinaryUrl);
+      console.log('🆔 Sending Public ID:', document.publicId);
+      formData.append('documentUrl', document.cloudinaryUrl);
+      formData.append('documentPublicId', document.publicId || '');
+    } else {
+      console.log('⚠️ No document data to send');
     }
 
     const url = editingLoanId ? `${API_URL}/${editingLoanId}` : API_URL;
@@ -144,7 +164,7 @@ const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'
     const res = await fetch(url, {
       method,
       body: formData,
-      // Don't set Content-Type header - let the browser set it with the correct boundary
+      // Don't set Content-Type header - let browser set it with the correct boundary
       headers: {
         'Accept': 'application/json',
       },
@@ -386,11 +406,23 @@ const [repaymentUnit, setRepaymentUnit] = useState<'SECOND' |'MINUTE' |'HOUR' |'
         <TouchableOpacity
           style={styles.documentButton}
           onPress={pickDocument}
+          disabled={uploadingDocument}
         >
-          <Ionicons name="cloud-upload-outline" size={22} color="#2C3E50" />
-          <Text style={styles.documentButtonText}>
-            {document?.name || 'Upload Document'}
-          </Text>
+          {uploadingDocument ? (
+            <>
+              <Ionicons name="hourglass-outline" size={22} color="#2C3E50" />
+              <Text style={styles.documentButtonText}>
+                Uploading...
+              </Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="cloud-upload-outline" size={22} color="#2C3E50" />
+              <Text style={styles.documentButtonText}>
+                {document?.name || 'Upload Document'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 

@@ -78,6 +78,7 @@ router.post('/login', async (req, res) => {
       message: 'Login successful',
       token,
       userId: user.userId,
+      mongoId: user._id.toString(), // Convert MongoDB ObjectId to string
       email: user.email,
       role: 'user',
     });

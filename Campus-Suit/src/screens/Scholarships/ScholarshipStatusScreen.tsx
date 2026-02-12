@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { AppCard } from '../../components/AppCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { theme } from '../../theme/theme';
@@ -29,7 +29,7 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
-const API_URL = 'http://192.168.31.130:5000/api/scholarshipApplications';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
 
 export const ScholarshipStatusScreen: React.FC = () => {
   const { user } = useAuth();
@@ -113,7 +113,6 @@ export const ScholarshipStatusScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title="My applications" subtitle="Scholarship status" />
       <FlatList
         contentContainerStyle={styles.list}
         data={applications}

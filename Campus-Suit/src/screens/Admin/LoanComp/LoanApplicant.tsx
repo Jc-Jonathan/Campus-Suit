@@ -8,7 +8,7 @@ type RootStackParamList = {
   // Add other screen params here as needed
 };
 
-const API_URL = 'http://192.168.31.130:5000/api/loanApplys';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys';
 
 type LoanApplication = {
   _id: string;

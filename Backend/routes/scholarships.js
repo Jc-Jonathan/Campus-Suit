@@ -2,41 +2,26 @@ const express = require('express');
 const router = express.Router();
 const Scholarship = require('../models/scholarship');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('../cloudinary');
 
-
-// Create uploads directory if it doesn't exist
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+// Configure multer to handle FormData without file storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.mimetype === 'application/msword' || 
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and Word documents are allowed'), false);
+    }
   },
 });
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/pdf' || file.mimetype === 'application/msword' || 
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    cb(null, true);
-  } else {
-    cb(new Error('Only PDF and Word documents are allowed'), false);
-  }
-};
-
-const upload = multer({ 
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  }
+// Separate multer instance for parsing FormData without files
+const uploadNone = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
 // GET ALL SCHOLARSHIPS
@@ -98,8 +83,28 @@ router.get('/:id', async (req, res) => {
 
 
 // ADD
-router.post('/add', upload.single('courseFile'), async (req, res) => {
+router.post('/add', uploadNone.none(), async (req, res) => {
   try {
+    console.log('📝 Adding new scholarship');
+    console.log('📋 Request body:', req.body);
+    
+    // Validate required fields
+    const { title, description, deadline, amount, percentage } = req.body;
+    
+    if (!title || !description || !deadline || !amount || !percentage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, description, deadline, amount, percentage'
+      });
+    }
+    
+    if (isNaN(amount) || isNaN(percentage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount and percentage must be valid numbers'
+      });
+    }
+    
     // 1️⃣ Get all existing scholarshipIds
     const existing = await Scholarship.find(
       { scholarshipId: { $exists: true } },
@@ -115,7 +120,21 @@ router.post('/add', upload.single('courseFile'), async (req, res) => {
       nextId++;
     }
 
-    // 3️⃣ Create new scholarship with reused ID
+    // 3️⃣ Handle Cloudinary URL from frontend
+    let courseFileUrl = req.body.courseFileUrl || '';
+    let courseFilePublicId = req.body.courseFilePublicId || '';
+    
+    console.log('🔍 Received courseFileUrl:', courseFileUrl);
+    console.log('🔍 Received courseFilePublicId:', courseFilePublicId);
+    
+    if (courseFileUrl) {
+      console.log(`📄 Using Cloudinary URL from frontend: ${courseFileUrl}`);
+      console.log(`🆔 Public ID: ${courseFilePublicId}`);
+    } else {
+      console.log('⚠️ No courseFileUrl received');
+    }
+
+    // 4️⃣ Create new scholarship
     const scholarship = new Scholarship({
       scholarshipId: nextId,
       title: req.body.title,
@@ -123,20 +142,24 @@ router.post('/add', upload.single('courseFile'), async (req, res) => {
       deadline: req.body.deadline,
       amount: req.body.amount,
       percentage: req.body.percentage,
-      courseFileUrl: req.file ? `/uploads/${req.file.filename}` : '',
+      courseFileUrl: courseFileUrl,
+      courseFilePublicId: courseFilePublicId,
     });
 
     await scholarship.save();
+
+    console.log(`✅ Scholarship created with ID: ${nextId}`);
 
     res.status(201).json({
       success: true,
       data: scholarship,
     });
   } catch (error) {
-    console.error('Error adding scholarship:', error);
+    console.error('❌ Error adding scholarship:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to add scholarship',
+      error: error.message,
     });
   }
 });
@@ -145,21 +168,33 @@ router.post('/add', upload.single('courseFile'), async (req, res) => {
 
 
 // UPDATE
-router.put('/:id', upload.single('courseFile'), async (req, res) => {
+router.put('/:id', uploadNone.none(), async (req, res) => {
   try {
-    console.log('Updating scholarship:', req.params.id);
+    console.log(`📝 Updating scholarship: ${req.params.id}`);
+    
     const updateData = { ...req.body };
     
-    if (req.file) {
-      // Delete old file if it exists
+    // Handle Cloudinary URL from frontend
+    let courseFileUrl = req.body.courseFileUrl || '';
+    let courseFilePublicId = req.body.courseFilePublicId || '';
+    
+    if (courseFileUrl) {
+      console.log(`📄 Using Cloudinary URL from frontend: ${courseFileUrl}`);
+      console.log(`🆔 Public ID: ${courseFilePublicId}`);
+      
+      updateData.courseFileUrl = courseFileUrl;
+      updateData.courseFilePublicId = courseFilePublicId;
+      
+      // Delete old file from Cloudinary if it exists and is different
       const oldScholarship = await Scholarship.findById(req.params.id);
-      if (oldScholarship?.courseFileUrl) {
-        const oldFilePath = path.join(__dirname, '..', oldScholarship.courseFileUrl);
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+      if (oldScholarship?.courseFilePublicId && oldScholarship.courseFilePublicId !== courseFilePublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldScholarship.courseFilePublicId);
+          console.log(`🗑️ Deleted old file from Cloudinary: ${oldScholarship.courseFilePublicId}`);
+        } catch (deleteError) {
+          console.warn('⚠️ Failed to delete old file from Cloudinary:', deleteError);
         }
       }
-      updateData.courseFileUrl = `/uploads/${req.file.filename}`;
     }
 
     const updated = await Scholarship.findByIdAndUpdate(
@@ -175,17 +210,18 @@ router.put('/:id', upload.single('courseFile'), async (req, res) => {
       });
     }
 
-    console.log('Updated scholarship:', updated);
+    console.log(`✅ Scholarship updated: ${req.params.id}`);
+
     res.json({
       success: true,
       data: updated
     });
   } catch (error) {
-    console.error('Error updating scholarship:', error);
+    console.error('❌ Error updating scholarship:', error);
     res.status(500).json({ 
       success: false,
       message: 'Update failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });
@@ -193,8 +229,8 @@ router.put('/:id', upload.single('courseFile'), async (req, res) => {
 // DELETE
 router.delete('/:id', async (req, res) => {
   try {
-    console.log('Deleting scholarship:', req.params.id);
-    const scholarship = await Scholarship.findByIdAndDelete(req.params.id);
+    console.log(`🗑️ Deleting scholarship: ${req.params.id}`);
+    const scholarship = await Scholarship.findById(req.params.id);
     
     if (!scholarship) {
       return res.status(404).json({
@@ -203,25 +239,31 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    // Delete associated file if it exists
-    if (scholarship.courseFileUrl) {
-      const filePath = path.join(__dirname, '..', scholarship.courseFileUrl);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    // Delete file from Cloudinary if it exists
+    if (scholarship.courseFilePublicId) {
+      try {
+        await cloudinary.uploader.destroy(scholarship.courseFilePublicId);
+        console.log(`🗑️ Deleted file from Cloudinary: ${scholarship.courseFilePublicId}`);
+      } catch (deleteError) {
+        console.warn('⚠️ Failed to delete file from Cloudinary:', deleteError);
       }
     }
 
-    console.log('Deleted scholarship:', scholarship._id);
+    // Delete scholarship from MongoDB
+    await Scholarship.findByIdAndDelete(req.params.id);
+
+    console.log(`✅ Scholarship deleted: ${req.params.id}`);
+
     res.json({ 
       success: true,
       message: 'Scholarship deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting scholarship:', error);
+    console.error('❌ Error deleting scholarship:', error);
     res.status(500).json({ 
       success: false,
       message: 'Delete failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });

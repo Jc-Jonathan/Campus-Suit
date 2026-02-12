@@ -40,9 +40,9 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
 
   const { addToCart, addToDirectCheckout } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
-  const API_URL = `http://192.168.31.130:5000/api/products`;
+  const API_URL = `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products`;
 
   useEffect(() => {
     fetch(`${API_URL}/${productId}`)
@@ -130,6 +130,25 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                     [
                       {
                         text: 'Login',
+                        onPress: () => navigation.navigate('AuthFlow'),
+                      },
+                    ]
+                  );
+                  return;
+                }
+
+                // Check if user is admin
+                if (user?.isAdmin) {
+                  Alert.alert(
+                    'Access Denied',
+                    'Admin users cannot place orders. Please sign in as a regular user to proceed.',
+                    [
+                      {
+                        text: 'Cancel',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Sign In as User',
                         onPress: () => navigation.navigate('AuthFlow'),
                       },
                     ]

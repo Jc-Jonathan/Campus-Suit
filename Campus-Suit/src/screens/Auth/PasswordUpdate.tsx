@@ -35,7 +35,7 @@ export const PasswordUpdateScreen = () => {
 
   try {
     const res = await fetch(
-      'http://192.168.31.130:5000/api/auth/forgot-password',
+      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/forgot-password',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

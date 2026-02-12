@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface ApiResponse {
   userId?: number;
+  mongoId?: string; // Add MongoDB _id
   email?: string;
   role?: string;
   message?: string;
@@ -71,7 +72,7 @@ export const SignInScreen = () => {
 
     try {
       const response = await fetch(
-        'http://192.168.31.130:5000/api/auth/login',
+        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/login',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,15 +82,30 @@ export const SignInScreen = () => {
 
       let data: ApiResponse = {};
       try {
-        data = await response.json();
-        console.log('Login response:', data); // Add logging to debug
-      } catch {
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        
+        // Check if response looks like JSON before parsing
+        if (responseText.trim().startsWith('{') && responseText.trim().endsWith('}')) {
+          data = JSON.parse(responseText);
+          console.log('Parsed login response:', data);
+        } else {
+          console.error('Response does not look like valid JSON:', responseText);
+          data = { message: 'Invalid server response format' };
+        }
+      } catch (error) {
+        console.error('JSON parse error:', error);
         data = { message: 'Invalid server response' };
       }
 
       if (!response.ok) {
         Alert.alert('Login Failed', data.message || 'Login failed');
         setPassword('');
+        return;
+      }
+
+      if (!data.mongoId) {
+        Alert.alert('Error', 'MongoDB ID not returned from server');
         return;
       }
 
@@ -104,9 +120,10 @@ export const SignInScreen = () => {
       }
 
       // The backend returns userId, email, and token
-      // We'll use userId as a string for mongoId since the actual _id isn't returned
-      // Consider updating the backend to return the _id field for better security
-      await loginAsStudent(data.userId.toString(), data.userId, data.email!, data.token!);
+      // Use userId as mongoId since actual _id isn't returned consistently
+      // Fallback to userId.toString() if mongoId is not available
+      const mongoId = data.mongoId || data.userId?.toString() || '';
+      await loginAsStudent(mongoId, data.userId!, data.email!, data.token!);
       setPassword('');
 
       // Navigate to the Profile tab after successful login
@@ -143,7 +160,7 @@ export const SignInScreen = () => {
 
   try {
     const response = await fetch(
-      'http://192.168.31.130:5000/api/admin/login',
+      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/admin/login',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,7 +189,7 @@ export const SignInScreen = () => {
           // Navigate to the admin dashboard
           navigation.reset({
             index: 0,
-            routes: [{ name: 'Admin' }],
+            routes: [{ name: 'Admin', params: { userToken: data.token } }],
           });
         },
       },

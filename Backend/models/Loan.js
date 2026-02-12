@@ -29,8 +29,12 @@ const LoanSchema = new mongoose.Schema(
       default: 'active',
     },
 
-    // ✅ SAME AS SCHOLARSHIP
+    // ✅ CLOUDINARY FIELDS
     documentUrl: {
+      type: String,
+      default: '',
+    },
+    documentPublicId: {
       type: String,
       default: '',
     },

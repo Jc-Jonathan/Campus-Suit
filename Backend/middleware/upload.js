@@ -1,18 +1,20 @@
 const multer = require('multer');
 
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  },
-});
-
 const upload = multer({
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') cb(null, true);
-    else cb(new Error('Only PDFs allowed'));
+  storage: multer.memoryStorage(), // ✅ IMPORTANT
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
   },
-  storage,
+  fileFilter: (req, file, cb) => {
+  if (
+    file.mimetype === 'application/pdf' ||
+    file.mimetype.startsWith('image/')
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only images or PDFs allowed'), false);
+  }
+}
 });
 
 module.exports = upload;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Text, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { DocumentPickerButton } from '../../components/DocumentPickerButton';
@@ -12,6 +12,8 @@ import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { uploadDocumentToCloudinary, UploadedDocument } from '../../utils/uploadDocument';
 
 export type ScholarshipApplyProps = NativeStackScreenProps<
   ScholarshipsStackParamList,
@@ -88,7 +90,7 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
     const fetchScholarship = async () => {
       try {
         const res = await fetch(
-          `http://192.168.31.130:5000/api/scholarships/${scholarshipId}` 
+          `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarships/${scholarshipId}` 
         );
         const json = await res.json();
 
@@ -124,6 +126,7 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [addressText, setAddressText] = useState('');
   const { user } = useAuth();
+  const { createScholarshipNotification } = useNotifications();
   
   // Auto-fill email if user is logged in
   useEffect(() => {
@@ -190,10 +193,11 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   name: string;
   type: string | null;
   size: number;
-  data:FormData;
+  cloudinaryUrl?: string;
+  publicId?: string;
 }
   
-  // Document states
+  // Document states with loading indicators
   const [documents, setDocuments] = useState({
     nationalId: null as PickedFile | null,
     transcript: null as PickedFile | null,
@@ -202,8 +206,40 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
     other: null as PickedFile | null,
   });
 
-  const handleDocumentPicked = (type: keyof typeof documents) => (file: { uri: string; name: string; type: string | null; size: number } | null) => {
-    setDocuments(prev => ({ ...prev, [type]: file }));
+  const [uploadingDocuments, setUploadingDocuments] = useState({
+    nationalId: false,
+    transcript: false,
+    recommendation: false,
+    enrollmentProof: false,
+    other: false,
+  });
+
+  const handleDocumentPicked = (type: keyof typeof documents) => async (file: { uri: string; name: string; type: string | null; size: number } | null) => {
+    if (!file) {
+      setDocuments(prev => ({ ...prev, [type]: null }));
+      return;
+    }
+
+    // Set loading state for this document type
+    setUploadingDocuments(prev => ({ ...prev, [type]: true }));
+    
+    try {
+      // Upload to Cloudinary
+      const uploadedFile = await uploadDocumentToCloudinary(file);
+      
+      // Update document state with Cloudinary data
+      setDocuments(prev => ({ ...prev, [type]: uploadedFile }));
+      
+      console.log(`✅ ${file.name} uploaded successfully to Cloudinary`);
+    } catch (error) {
+      // Error is already shown as popup from uploadDocumentToCloudinary
+      console.error(`❌ Upload failed for ${file.name}`);
+      // Clear the document on upload failure
+      setDocuments(prev => ({ ...prev, [type]: null }));
+    } finally {
+      // Clear loading state
+      setUploadingDocuments(prev => ({ ...prev, [type]: false }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -249,48 +285,38 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
       formData.append('scholarshipId', scholarshipId);
       formData.append('scholarshipTitle', scholarshipTitle);
 
-      // Append files if they exist
-      if (documents.nationalId) {
-        formData.append('nationalId', {
-          uri: documents.nationalId.uri,
-          type: documents.nationalId.type || 'application/octet-stream',
-          name: documents.nationalId.name || 'nationalId.jpg'
-        } as any);
+      // Append files with Cloudinary URLs if they exist
+      if (documents.nationalId && documents.nationalId.cloudinaryUrl) {
+        formData.append('nationalIdUrl', documents.nationalId.cloudinaryUrl);
+        formData.append('nationalIdPublicId', documents.nationalId.publicId || '');
+        formData.append('nationalIdName', documents.nationalId.name);
       }
 
-      if (documents.transcript) {
-        formData.append('transcript', {
-          uri: documents.transcript.uri,
-          type: documents.transcript.type || 'application/pdf',
-          name: documents.transcript.name || 'transcript.pdf'
-        } as any);
+      if (documents.transcript && documents.transcript.cloudinaryUrl) {
+        formData.append('transcriptUrl', documents.transcript.cloudinaryUrl);
+        formData.append('transcriptPublicId', documents.transcript.publicId || '');
+        formData.append('transcriptName', documents.transcript.name);
       }
 
-      if (documents.recommendation) {
-        formData.append('recommendation', {
-          uri: documents.recommendation.uri,
-          type: documents.recommendation.type || 'application/pdf',
-          name: documents.recommendation.name || 'recommendation.pdf'
-        } as any);
+      if (documents.recommendation && documents.recommendation.cloudinaryUrl) {
+        formData.append('recommendationUrl', documents.recommendation.cloudinaryUrl);
+        formData.append('recommendationPublicId', documents.recommendation.publicId || '');
+        formData.append('recommendationName', documents.recommendation.name);
       }
 
-      if (documents.enrollmentProof) {
-        formData.append('enrollmentProof', {
-          uri: documents.enrollmentProof.uri,
-          type: documents.enrollmentProof.type || 'application/pdf',
-          name: documents.enrollmentProof.name || 'enrollmentProof.pdf'
-        } as any);
+      if (documents.enrollmentProof && documents.enrollmentProof.cloudinaryUrl) {
+        formData.append('enrollmentProofUrl', documents.enrollmentProof.cloudinaryUrl);
+        formData.append('enrollmentProofPublicId', documents.enrollmentProof.publicId || '');
+        formData.append('enrollmentProofName', documents.enrollmentProof.name);
       }
 
-      if (documents.other) {
-        formData.append('other', {
-          uri: documents.other.uri,
-          type: documents.other.type || 'application/octet-stream',
-          name: documents.other.name || 'other_document.pdf'
-        } as any);
+      if (documents.other && documents.other.cloudinaryUrl) {
+        formData.append('otherUrl', documents.other.cloudinaryUrl);
+        formData.append('otherPublicId', documents.other.publicId || '');
+        formData.append('otherName', documents.other.name);
       }
 
-      const response = await fetch('http://192.168.31.130:5000/api/scholarshipApplications', {
+      const response = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications', {
         method: 'POST',
         body: formData,
         headers: {
@@ -303,12 +329,20 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
         throw new Error(errorData.message || 'Failed to submit application');
       }
 
+      // Create scholarship notification after successful submission
+      await createScholarshipNotification(
+        fullName,
+        email,
+        scholarshipTitle,
+        program
+      );
+
       Alert.alert('Success', 'Your application has been submitted successfully!');
       navigation.goBack();
     } catch (error: unknown) {
-      console.error('Error submitting application:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to submit application. Please try again.';
-      Alert.alert('Error', errorMessage);
+      console.error('❌ Error submitting application:', errorMessage);
+      Alert.alert('Submission Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -400,7 +434,6 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title="Apply" subtitle="Scholarship application" />
       <ScrollView contentContainerStyle={styles.content}>
         {!loadingScholarship && (
           <Text style={styles.applyTitle}>
@@ -550,26 +583,31 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
           label="National ID / Passport" 
           onDocumentPicked={handleDocumentPicked('nationalId')}
           value={documents.nationalId?.name}
+          loading={uploadingDocuments.nationalId}
         />
         <DocumentPickerButton 
           label="Academic transcript / results" 
           onDocumentPicked={handleDocumentPicked('transcript')}
           value={documents.transcript?.name}
+          loading={uploadingDocuments.transcript}
         />
         <DocumentPickerButton 
           label="Recommendation letter" 
           onDocumentPicked={handleDocumentPicked('recommendation')}
           value={documents.recommendation?.name}
+          loading={uploadingDocuments.recommendation}
         />
         <DocumentPickerButton 
           label="Proof of enrollment" 
           onDocumentPicked={handleDocumentPicked('enrollmentProof')}
           value={documents.enrollmentProof?.name}
+          loading={uploadingDocuments.enrollmentProof}
         />
         <DocumentPickerButton 
           label="Any other required document" 
           onDocumentPicked={handleDocumentPicked('other')}
           value={documents.other?.name}
+          loading={uploadingDocuments.other}
         />
 
         <AppButton label="Submit application" onPress={handleSubmit} loading={loading} />
@@ -686,6 +724,8 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
     </View>
   );
 };
+
+export default ScholarshipApplyScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
@@ -866,4 +906,7 @@ inputContainer: {
   },
 });
 
-export default ScholarshipApplyScreen;
+
+
+
+

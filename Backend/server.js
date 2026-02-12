@@ -1,23 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const connectMongo = require('./connectdb');
-const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'public', 'uploads');
-const loansDir = path.join(uploadsDir, 'loans');
-
-// Create directories if they don't exist
-[uploadsDir, loansDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log(`Created directory: ${dir}`);
-  }
-});
 
 /* 🔹 Middleware */
 app.use(cors({
@@ -51,12 +37,6 @@ app.use('/api/Banners', require('./routes/Banners'));
 app.use('/api/notifications', require('./routes/Notifications'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/userorders', require('./routes/UserOrders'));
-
-/* 🔹 Serve uploaded files */
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-
-// Log static file serving configuration
-console.log('Serving static files from:', path.join(__dirname, 'public', 'uploads'));
 
 /* 🔹 Server */
 const PORT = process.env.PORT || 5000;

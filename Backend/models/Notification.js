@@ -11,7 +11,7 @@ const NotificationSchema = new mongoose.Schema(
     // 🔥 NEW
     category: {
       type: String,
-      enum: ['ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP'],
+      enum: ['ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP', 'LOAN'],
       required: true,
     },
 
@@ -35,6 +35,10 @@ const NotificationSchema = new mongoose.Schema(
       },
     ],
 
+    // Email-based filtering for user-specific notifications
+    reader: String,
+    targetUser: String,
+
     pdfUrl: String,
     fileName: String,
     
@@ -51,6 +55,25 @@ const NotificationSchema = new mongoose.Schema(
       }],
       totalAmount: Number,
       createdAt: Date
+    },
+
+    // Store scholarship details for scholarship notifications
+    scholarshipInfo: {
+      applicantName: String,
+      applicantEmail: String,
+      scholarshipName: String,
+      courseName: String,
+      message: String
+    },
+
+    // Store loan details for loan notifications
+    loanInfo: {
+      applicantName: String,
+      applicantEmail: String,
+      loanName: String,
+      amount: String,
+      interestRate: String,
+      message: String
     }
   },
   { timestamps: true }

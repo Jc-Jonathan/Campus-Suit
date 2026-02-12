@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.31.130:5000/api/scholarshipApplications';
-const BASE_URL = 'http://192.168.31.130:5000';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
+const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export interface DetailItemProps {
   label: string;
@@ -80,7 +80,7 @@ const ApplicantDetail = ({ route, navigation }: any) => {
       
       // Try to send email notification (don't fail if this doesn't work)
       try {
-        await axios.post('http://192.168.31.130:5000/api/send-email', {
+        await axios.post('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/send-email', {
           to: app.email,
           subject: emailSubject,
           message: emailMessage,
@@ -92,41 +92,39 @@ const ApplicantDetail = ({ route, navigation }: any) => {
         // Continue with notification storage even if email fails
       }
       
-      // Store notification in backend (try with simpler structure first)
+      // Store notification in backend (use the scholarship endpoint for scholarship notifications)
       const notificationMessage = status === 'approved'
         ? `Congratulations! Your scholarship application for ${app.scholarshipTitle} has been approved.`
         : `Your scholarship application for ${app.scholarshipTitle} has been denied.`;
       
       try {
-        // Try the standard notification endpoint first
-        await axios.post('http://192.168.31.130:5000/api/notifications', {
+        // Use the scholarship notification endpoint
+        await axios.post('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications/scholarship', {
           message: notificationMessage,
           category: 'SCHOLARSHIP',
-          type: status === 'approved' ? 'SCHOLARSHIP_APPROVED' : 'SCHOLARSHIP_REJECTED',
-          recipients: [app._id], // Send to the applicant
-          createdBy: 'admin',
-          applicantInfo: {
-            fullName: app.fullName,
-            email: app.email,
-            scholarshipTitle: app.scholarshipTitle,
-            program: app.program,
-            status: status
+          reader: app.email, // Use email as reader identifier
+          scholarshipInfo: {
+            applicantName: app.fullName,
+            applicantEmail: app.email,
+            scholarshipName: app.scholarshipTitle,
+            courseName: app.program,
+            message: notificationMessage
           }
         });
-        console.log('Notification stored successfully');
+        console.log('Scholarship notification stored successfully');
       } catch (notificationError) {
-        console.warn('Notification storage failed:', notificationError);
-        // Try with minimal structure
+        console.warn('Scholarship notification storage failed:', notificationError);
+        // Try with the general notification endpoint as fallback
         try {
-          await axios.post('http://192.168.31.130:5000/api/notifications', {
+          await axios.post('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications', {
             message: notificationMessage,
             category: 'SCHOLARSHIP',
-            recipients: [app._id],
-            createdBy: 'admin'
+            type: 'ALL', // Use 'ALL' as targetType equivalent
+            recipients: [], // Empty array for ALL type
           });
-          console.log('Minimal notification stored successfully');
-        } catch (minimalError) {
-          console.warn('Minimal notification storage also failed:', minimalError);
+          console.log('General notification stored successfully');
+        } catch (generalError) {
+          console.warn('General notification storage also failed:', generalError);
           // Continue anyway - the status update was successful
         }
       }
@@ -165,48 +163,86 @@ const ApplicantDetail = ({ route, navigation }: any) => {
 
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const downloadDoc = async (path: string, docName: string) => {
+  const downloadDoc = async (cloudinaryUrl: string, docName: string) => {
     if (isDownloading) {
       Alert.alert('Please wait', 'A document is already being downloaded');
       return;
     }
 
-    if (!path) {
+    if (!cloudinaryUrl) {
       Alert.alert('Error', 'Document not found');
       return;
     }
 
     setIsDownloading(true);
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    const url = `${BASE_URL}/${cleanPath}`;
 
     try {
-      Alert.alert(
-        'Download Document',
-        `Do you want to download ${docName}?`,
-        [
-          { 
-            text: 'Cancel', 
-            style: 'cancel',
-            onPress: () => setIsDownloading(false)
-          },
-          {
-            text: 'Download',
-            onPress: async () => {
-              try {
-                await Linking.openURL(url);
-              } catch (err) {
-                console.error('Error opening URL:', err);
-                Alert.alert('Error', 'Could not open the document. Please try again.');
-              } finally {
-                setIsDownloading(false);
-              }
+      // Check if it's a Cloudinary URL
+      if (cloudinaryUrl.includes('cloudinary.com')) {
+        console.log(`📥 Downloading from Cloudinary: ${docName}`);
+        console.log(`🔗 URL: ${cloudinaryUrl}`);
+        
+        Alert.alert(
+          'Download Document',
+          `Do you want to download ${docName}?`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => setIsDownloading(false)
             },
-          },
-        ]
-      );
+            {
+              text: 'Download',
+              onPress: async () => {
+                try {
+                  // For Cloudinary URLs, we can open them directly
+                  // The browser will handle the download
+                  await Linking.openURL(cloudinaryUrl);
+                  console.log(`✅ Successfully opened Cloudinary document: ${docName}`);
+                } catch (err) {
+                  console.error('❌ Error opening Cloudinary URL:', err);
+                  Alert.alert('Error', 'Could not open the document. Please try again.');
+                } finally {
+                  setIsDownloading(false);
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        // Fallback for any non-Cloudinary URLs (legacy support)
+        console.log(`📥 Downloading from local server: ${docName}`);
+        const cleanPath = cloudinaryUrl.startsWith('/') ? cloudinaryUrl.substring(1) : cloudinaryUrl;
+        const url = `${BASE_URL}/${cleanPath}`;
+        
+        Alert.alert(
+          'Download Document',
+          `Do you want to download ${docName}?`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => setIsDownloading(false)
+            },
+            {
+              text: 'Download',
+              onPress: async () => {
+                try {
+                  await Linking.openURL(url);
+                  console.log(`✅ Successfully opened local document: ${docName}`);
+                } catch (err) {
+                  console.error('❌ Error opening local URL:', err);
+                  Alert.alert('Error', 'Could not open the document. Please try again.');
+                } finally {
+                  setIsDownloading(false);
+                }
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Error showing download dialog:', error);
+      console.error('❌ Error showing download dialog:', error);
       setIsDownloading(false);
     }
   };
@@ -216,6 +252,7 @@ const ApplicantDetail = ({ route, navigation }: any) => {
     key: string;
     label: string;
     url: string;
+    isCloudinary?: boolean;
   }
 
   // Document items to render
@@ -235,10 +272,12 @@ const ApplicantDetail = ({ route, navigation }: any) => {
     // Check each document field and add to the list if it exists
     documentFields.forEach(({ key, label }) => {
       if (app[key] && typeof app[key] === 'string' && app[key].trim() !== '') {
+        const url = app[key];
         documentItems.push({
           key,
           label,
-          url: app[key]
+          url,
+          isCloudinary: url.includes('cloudinary.com')
         });
       }
     });
@@ -247,6 +286,7 @@ const ApplicantDetail = ({ route, navigation }: any) => {
     if (app.documents && typeof app.documents === 'object') {
       Object.entries(app.documents).forEach(([key, value]) => {
         if (value && typeof value === 'string' && value.trim() !== '') {
+          const url = value;
           const formattedKey = key.replace(/([A-Z])/g, ' $1')
             .replace(/^./, str => str.toUpperCase())
             .replace('Url', '');
@@ -254,7 +294,8 @@ const ApplicantDetail = ({ route, navigation }: any) => {
           documentItems.push({
             key: `doc_${key}`,
             label: formattedKey,
-            url: value
+            url,
+            isCloudinary: url.includes('cloudinary.com')
           });
         }
       });
@@ -316,8 +357,22 @@ const ApplicantDetail = ({ route, navigation }: any) => {
         {documentItems.length > 0 ? (
           documentItems.map((doc) => {
             // Extract filename from URL for display
-            const fileName = doc.url.split('/').pop() || 'document';
-            const fileType = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+            let fileName = 'document';
+            let fileType = 'FILE';
+            
+            if (doc.isCloudinary) {
+              // For Cloudinary URLs, extract the public ID or use a generic name
+              const urlParts = doc.url.split('/');
+              fileName = urlParts[urlParts.length - 1] || 'cloudinary_document';
+              // Extract file extension from the URL if available
+              const urlWithParams = fileName.split('?')[0];
+              const extension = urlWithParams.split('.').pop()?.toUpperCase();
+              fileType = extension && ['PDF', 'JPG', 'PNG', 'DOC', 'DOCX'].includes(extension) ? extension : 'FILE';
+            } else {
+              // For local URLs, extract filename as before
+              fileName = doc.url.split('/').pop() || 'document';
+              fileType = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+            }
             
             return (
               <TouchableOpacity
@@ -326,7 +381,14 @@ const ApplicantDetail = ({ route, navigation }: any) => {
                 onPress={() => downloadDoc(doc.url, doc.label)}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.documentTitle}>{doc.label}</Text>
+                  <View style={styles.documentHeader}>
+                    <Text style={styles.documentTitle}>{doc.label}</Text>
+                    {doc.isCloudinary && (
+                      <View style={styles.cloudinaryBadge}>
+                        <Text style={styles.cloudinaryBadgeText}>☁️ Cloud</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
                     {fileName}
                   </Text>
@@ -421,11 +483,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
+  documentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  cloudinaryBadge: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbdefb',
+  },
+  cloudinaryBadgeText: {
+    fontSize: 10,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
   documentTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#212529',
-    marginBottom: 4,
+    flex: 1,
   },
   fileName: {
     fontSize: 13,

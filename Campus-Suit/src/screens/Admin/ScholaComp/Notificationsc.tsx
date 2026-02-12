@@ -13,7 +13,7 @@ import axios from 'axios';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 
-const API_URL = 'http://192.168.31.130:5000/api/scholarshipApplications';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
 
 interface ScholarshipApplication {
   _id: string;
@@ -85,7 +85,7 @@ export const Notificationsc: React.FC = () => {
         category: 'SCHOLARSHIP'
       };
 
-      await axios.post('http://192.168.31.130:5000/api/notifications', notificationData, {
+      await axios.post('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications', notificationData, {
         headers: {
           'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json'

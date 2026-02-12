@@ -8,11 +8,40 @@ import {
   TextInput,
   Platform,
   Alert,
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
+import { uploadScholarshipFileToCloudinary, UploadedScholarshipFile } from '../../../utils/uploadScholarshipFile';
 
-const API_URL = 'http://192.168.31.130:5000/api/scholarships';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarships';
+
+// Helper function to extract filename from URL
+const extractFileName = (url: string): string => {
+  if (!url) return 'Unknown file';
+  
+  // Remove query parameters and hash
+  const cleanUrl = url.split('?')[0].split('#')[0];
+  
+  // Extract filename from path
+  const fileName = cleanUrl.split('/').pop();
+  
+  // If it's a Cloudinary URL, decode and clean it
+  if (url.includes('cloudinary.com')) {
+    try {
+      const decoded = decodeURIComponent(fileName || '');
+      // Remove Cloudinary folder structure and version numbers
+      const parts = decoded.split('/');
+      const actualFileName = parts[parts.length - 1];
+      return actualFileName || fileName || 'Unknown file';
+    } catch {
+      return fileName || 'Unknown file';
+    }
+  }
+  
+  return fileName || 'Unknown file';
+};
 
 interface Scholarship {
   _id: string;
@@ -22,6 +51,7 @@ interface Scholarship {
   amount: number;
   percentage: number;
   courseFileUrl?: string;
+  courseFilePublicId?: string;
 }
 
 export const Scholarship: React.FC = () => {
@@ -37,7 +67,8 @@ export const Scholarship: React.FC = () => {
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [courseFile, setCourseFile] = useState<any>(null);
+  const [courseFile, setCourseFile] = useState<UploadedScholarshipFile | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     fetchScholarships();
@@ -70,16 +101,46 @@ export const Scholarship: React.FC = () => {
   };
 
   const pickDocument = async () => {
+    if (uploadingFile) {
+      Alert.alert('Please wait', 'File is already uploading');
+      return;
+    }
+
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/pdf',
     });
 
-    if (!result.canceled) {
-      setCourseFile(result.assets[0]);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const file = result.assets[0];
+      const uploadedFile: UploadedScholarshipFile = {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || null,
+        size: file.size || 0,
+      };
+
+      setUploadingFile(true);
+      
+      try {
+        const cloudinaryFile = await uploadScholarshipFileToCloudinary(uploadedFile);
+        console.log('📥 Cloudinary upload result:', cloudinaryFile);
+        setCourseFile(cloudinaryFile);
+        console.log('✅ courseFile state set to:', cloudinaryFile);
+      } catch (error) {
+        console.error('Upload failed:', error);
+        setCourseFile(null);
+        console.log('❌ courseFile state set to null due to error');
+      } finally {
+        setUploadingFile(false);
+      }
     }
   };
 
   const handleAddScholarship = async () => {
+    console.log('🚀 Starting handleAddScholarship');
+    console.log('📁 Current courseFile state:', courseFile);
+    console.log('📝 Current formData:', formData);
+    
     if (
       !formData.title ||
       !formData.description ||
@@ -87,7 +148,7 @@ export const Scholarship: React.FC = () => {
       !formData.amount ||
       !formData.percentage
     ) {
-      alert('Please fill all fields');
+      Alert.alert('Validation', 'Please fill all fields');
       return;
     }
 
@@ -99,13 +160,29 @@ export const Scholarship: React.FC = () => {
       form.append('amount', formData.amount);
       form.append('percentage', formData.percentage);
 
-      if (courseFile) {
-        form.append('courseFile', {
-          uri: courseFile.uri,
-          name: courseFile.name,
-          type: 'application/pdf',
-        } as any);
+      console.log('📋 FormData created with basic fields');
+
+      // Send Cloudinary URL if file was uploaded
+      if (courseFile && courseFile.cloudinaryUrl) {
+        console.log('📤 Sending Cloudinary URL:', courseFile.cloudinaryUrl);
+        console.log('🆔 Sending Public ID:', courseFile.publicId);
+        form.append('courseFileUrl', courseFile.cloudinaryUrl);
+        form.append('courseFilePublicId', courseFile.publicId || '');
+      } else {
+        console.log('⚠️ No course file data to send');
+        console.log('courseFile exists:', !!courseFile);
+        console.log('courseFile.cloudinaryUrl exists:', !!(courseFile?.cloudinaryUrl));
       }
+
+      console.log('📤 About to send request to:', editingId ? `${API_URL}/${editingId}` : `${API_URL}/add`);
+      console.log('📋 FormData entries:');
+      console.log('  title:', formData.title);
+      console.log('  description:', formData.description);
+      console.log('  deadline:', formData.deadline);
+      console.log('  amount:', formData.amount);
+      console.log('  percentage:', formData.percentage);
+      console.log('  courseFileUrl:', courseFile?.cloudinaryUrl || 'none');
+      console.log('  courseFilePublicId:', courseFile?.publicId || 'none');
 
       const res = await fetch(
         editingId ? `${API_URL}/${editingId}` : `${API_URL}/add`,
@@ -116,7 +193,13 @@ export const Scholarship: React.FC = () => {
         }
       );
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error('Failed to save scholarship');
+
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Operation failed');
+      }
 
       fetchScholarships();
       setEditingId(null);
@@ -128,8 +211,12 @@ export const Scholarship: React.FC = () => {
         amount: '',
         percentage: '',
       });
-    } catch {
-      alert('Operation failed');
+      
+      Alert.alert('Success', editingId ? 'Scholarship updated successfully!' : 'Scholarship added successfully!');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed';
+      console.error(' Scholarship operation failed:', errorMessage);
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -142,19 +229,39 @@ export const Scholarship: React.FC = () => {
       amount: item.amount.toString(),
       percentage: item.percentage.toString(),
     });
+    // Reset course file state when editing
+    setCourseFile(null);
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert('Confirm', 'Delete this scholarship?', [
-      { text: 'Cancel' },
-      {
-        text: 'Delete',
-        onPress: async () => {
-          await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-          fetchScholarships();
+    Alert.alert(
+      'Delete Scholarship',
+      'Are you sure you want to delete this scholarship?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+              });
+
+              if (response.ok) {
+                Alert.alert('Success', 'Scholarship deleted successfully');
+                fetchScholarships();
+              } else {
+                Alert.alert('Error', 'Failed to delete scholarship');
+              }
+            } catch (error) {
+              console.error('Error deleting scholarship:', error);
+              Alert.alert('Error', 'Failed to delete scholarship');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   return (
@@ -213,9 +320,9 @@ export const Scholarship: React.FC = () => {
               onChangeText={text => handleInputChange('percentage', text)}
             />
 
-            <TouchableOpacity style={styles.input} onPress={pickDocument}>
+            <TouchableOpacity style={styles.input} onPress={pickDocument} disabled={uploadingFile}>
               <Text>
-                {courseFile ? courseFile.name : 'Upload Course List (PDF)'}
+                {uploadingFile ? 'Uploading...' : (courseFile ? courseFile.name : 'Upload Course List (PDF)')}
               </Text>
             </TouchableOpacity>
 
@@ -240,9 +347,18 @@ export const Scholarship: React.FC = () => {
               <Text>Deadline: {item.deadline}</Text>
 
               {item.courseFileUrl && (
-                <Text style={{ color: '#2980b9', marginTop: 5 }}>
-                  📄 {item.courseFileUrl.split('/').pop()}
-                </Text>
+                <View style={styles.courseFileContainer}>
+                  <View style={styles.courseFileInfo}>
+                    <Text style={{ color: '#2980b9', marginTop: 5 }}>
+                      📄 {extractFileName(item.courseFileUrl)}
+                    </Text>
+                    {item.courseFileUrl.includes('cloudinary.com') && (
+                      <View style={styles.cloudinaryBadge}>
+                        <Text style={styles.cloudinaryBadgeText}>☁️ Cloud</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               )}
 
               <View style={{ flexDirection: 'row', marginTop: 10 }}>
@@ -313,4 +429,31 @@ const styles = StyleSheet.create({
   },
   primaryButton: { backgroundColor: '#4CAF50' },
   buttonText: { color: '#fff', fontWeight: '600' },
+  courseFileContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  courseFileInfo: {
+    flex: 1,
+  },
+  cloudinaryBadge: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbdefb',
+  },
+  cloudinaryBadgeText: {
+    fontSize: 10,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
 });

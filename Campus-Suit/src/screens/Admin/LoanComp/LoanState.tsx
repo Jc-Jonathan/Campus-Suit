@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.31.130:5000/api/loanApplys';
+const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys';
 
 export const LoanState = () => {
   const [loans, setLoans] = useState<any[]>([]);

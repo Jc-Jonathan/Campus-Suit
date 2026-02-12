@@ -242,6 +242,32 @@ router.patch('/:orderId/status', async (req, res) => {
   }
 });
 
+// DELETE ORDER (ADMIN)
+router.delete('/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    const order = await UserOrder.findOneAndDelete({ orderId: parseInt(orderId) });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.status(200).json({
+      message: 'Order deleted successfully',
+      order: {
+        orderId: order.orderId
+      }
+    });
+  } catch (err) {
+    console.error('Delete order error:', err);
+    res.status(500).json({ 
+      message: 'Failed to delete order',
+      error: err.message 
+    });
+  }
+});
+
 // Helper functions for email content
 function getOrderStatusEmailSubject(status) {
   const subjects = {
@@ -277,47 +303,56 @@ function getOrderStatusEmailContent(order, status) {
 // Helper function to create shop notification
 async function createShopNotification(order, status) {
   try {
-    // Create personalized message with product summary
     const customerName = order.name;
     const productCount = order.items.length;
-    
-    let message = `Hello "${customerName}"\nOrder status updated to ${status}`;
-    
-    // Add "show more" indicator if multiple products
+
+    let message = `Hello ${customerName},
+
+Your order #${order.orderId} has been ${status.toUpperCase()}.
+
+Total amount: $${order.totalAmount.toFixed(2)}`;
+
     if (productCount > 1) {
-      message += "\n\nTap to view all products and details";
+      message += `
+
+Tap to view product details.`;
     }
-    
-    // Create notification with product details embedded
+
     const notificationData = {
       message,
       category: 'SHOP',
-      targetType: 'ALL',
-      targetUsers: [],
-      // Store order details for frontend display
+      targetType: 'USER',
+      targetUsers: [order.email], // Only the customer
+
       orderDetails: {
         orderId: order.orderId,
         customerName: order.name,
+        customerEmail: order.email,
         status: status,
-        items: order.items,
         totalAmount: order.totalAmount,
-        createdAt: order.createdAt
+        createdAt: order.createdAt,
+
+        // ✅ Normalize items properly
+        items: order.items.map(item => ({
+          productName: item.productName,
+          productImage: item.productImage,
+          price: item.price,
+          quantity: item.quantity
+        }))
       }
     };
-    
-    console.log('Creating notification with data:', JSON.stringify(notificationData, null, 2));
-    
+
+    console.log("✅ Creating shop notification:");
+    console.log(JSON.stringify(notificationData, null, 2));
+
     const notification = await Notification.create(notificationData);
-    
-    // Verify the notification was created correctly
-    const savedNotification = await Notification.findById(notification._id);
-    console.log('Saved notification orderDetails:', JSON.stringify(savedNotification.orderDetails, null, 2));
-    
-    console.log('Shop notification created:', message);
+
     return notification;
+
   } catch (error) {
-    console.error('Failed to create shop notification:', error);
+    console.error('❌ Failed to create shop notification:', error);
   }
 }
+
 
 module.exports = router;

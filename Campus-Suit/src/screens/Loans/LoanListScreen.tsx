@@ -15,7 +15,7 @@ import { Header, HeaderTab } from '../../components/Header';
 import { AppCard } from '../../components/AppCard';
 import { theme } from '../../theme/theme';
 
-const API_BASE = 'http://192.168.31.130:5000';
+const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 type Loan = {
   loanId: number;

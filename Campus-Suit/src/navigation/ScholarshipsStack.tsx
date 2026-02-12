@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ScholarshipListScreen } from '../screens/Scholarships/ScholarshipListScreen';
 import { ScholarshipDetailScreen } from '../screens/Scholarships/ScholarshipDetailScreen';
-import { ScholarshipApplyScreen } from '../screens/Scholarships/ScholarshipApplyScreen';
+import ScholarshipApplyScreen from '../screens/Scholarships/ScholarshipApplyScreen';
 import { ScholarshipStatusScreen } from '../screens/Scholarships/ScholarshipStatusScreen';
 import { SearchScreen } from '../screens/Common/SearchScreen';
 import NotificationScreen from '../screens/Common/NotificationsScreen';

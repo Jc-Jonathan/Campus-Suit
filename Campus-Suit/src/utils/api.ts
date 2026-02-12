@@ -125,4 +125,39 @@ export const orderAPI = {
       throw error;
     }
   },
+
+  // ============================
+  // DELETE ORDER (ADMIN)
+  // ============================
+  deleteOrder: async (orderId: number): Promise<void> => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/userorders/${orderId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Expected JSON but received:', text.substring(0, 200));
+        throw new Error('Server returned non-JSON response');
+      }
+
+      const data = await response.json();
+
+      // Check if the response indicates success
+      if (!data.message || data.message.includes('Failed') || data.message.includes('Error')) {
+        throw new Error(data.message || 'Failed to delete order');
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      throw error;
+    }
+  },
 };

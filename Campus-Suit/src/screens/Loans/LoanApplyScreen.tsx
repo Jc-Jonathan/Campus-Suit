@@ -6,7 +6,7 @@ import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LoansStackParamList } from '../../navigation/LoansStack';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { DocumentPickerButton } from '../../components/DocumentPickerButton';
@@ -14,11 +14,14 @@ import { theme } from '../../theme/theme';
 import { API_URL } from '../../config';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { uploadLoanDocumentToCloudinary, UploadedLoanDocument } from '../../utils/uploadLoanDocuments';
 
 export type LoanApplyProps = NativeStackScreenProps<LoansStackParamList, 'LoanApply'>;
 
 export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route }) => {
   const { userId, loading: authLoading } = useAuth();
+  const { createLoanApplicationNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -39,9 +42,15 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
   // Loan details
   const [amount, setAmount] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [idDocument, setIdDocument] = useState<PickedFile | null>(null);
-  const [schoolIdDocument, setSchoolIdDocument] = useState<PickedFile | null>(null);
-  const [agreementDocument, setAgreementDocument] = useState<PickedFile | null>(null);
+  const [idDocument, setIdDocument] = useState<UploadedLoanDocument | null>(null);
+  const [schoolIdDocument, setSchoolIdDocument] = useState<UploadedLoanDocument | null>(null);
+  const [agreementDocument, setAgreementDocument] = useState<UploadedLoanDocument | null>(null);
+  const [uploadingIdDocument, setUploadingIdDocument] = useState(false);
+  const [uploadingSchoolIdDocument, setUploadingSchoolIdDocument] = useState(false);
+  const [uploadingAgreementDocument, setUploadingAgreementDocument] = useState(false);
+  const [idDocumentError, setIdDocumentError] = useState(false);
+  const [schoolIdDocumentError, setSchoolIdDocumentError] = useState(false);
+  const [agreementDocumentError, setAgreementDocumentError] = useState(false);
 
   // Declaration checkboxes
   const [confirmAccurate, setConfirmAccurate] = useState(false);
@@ -64,6 +73,41 @@ export const LoanApplyScreen: React.FC<LoanApplyProps> = ({ navigation, route })
   const [loanDetails, setLoanDetails] = useState<any>(null);
 
   const submissionDate = new Date().toISOString().split('T')[0];
+
+  // Function to handle document upload to Cloudinary
+  const handleDocumentUpload = async (
+    file: PickedFile | null,
+    setUploader: (doc: UploadedLoanDocument | null) => void,
+    setUploading: (loading: boolean) => void,
+    documentType: string,
+    setError: (error: boolean) => void
+  ) => {
+    if (!file || loading) return;
+
+    try {
+      setUploading(true);
+      setError(false);
+      const uploadedFile: UploadedLoanDocument = {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/pdf',
+        size: file.size || 0,
+      };
+
+      const cloudinaryFile = await uploadLoanDocumentToCloudinary(uploadedFile);
+      setUploader(cloudinaryFile);
+      console.log(`✅ ${documentType} uploaded to Cloudinary:`, cloudinaryFile.cloudinaryUrl);
+    } catch (error) {
+      console.error(`❌ Failed to upload ${documentType}:`, error);
+      setError(true);
+      // Don't set the document on failure - keep it null so "No document selected" shows
+      Alert.alert('Upload Error', `Failed to upload ${documentType}. Please check your internet connection and try again.`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Individual document upload handlers are now inline in the JSX
 
   // Fetch loan title on component mount
   useEffect(() => {
@@ -240,36 +284,32 @@ useEffect(() => {
       formData.append('agreeTerms', agreeTerms.toString());
       formData.append('understandRisk', understandRisk.toString());
 
-      // Append files if they exist
-      if (idDocument) {
-        formData.append('idDocument', {
-          uri: idDocument.uri,
-          type: idDocument.type || 'application/octet-stream',
-          name: idDocument.name || 'idDocument.jpg'
-        } as any);
+      // Append Cloudinary URLs if documents were uploaded
+      if (idDocument && idDocument.cloudinaryUrl) {
+        console.log('📤 Sending National ID URL:', idDocument.cloudinaryUrl);
+        formData.append('idDocumentUrl', idDocument.cloudinaryUrl);
+        formData.append('idDocumentPublicId', idDocument.publicId || '');
+      } else {
+        console.log('⚠️ No National ID document uploaded');
       }
 
-      if (schoolIdDocument) {
-        formData.append('schoolIdDocument', {
-          uri: schoolIdDocument.uri,
-          type: schoolIdDocument.type || 'application/octet-stream',
-          name: schoolIdDocument.name || 'schoolIdDocument.jpg'
-        } as any);
+      if (schoolIdDocument && schoolIdDocument.cloudinaryUrl) {
+        console.log('📤 Sending School ID URL:', schoolIdDocument.cloudinaryUrl);
+        formData.append('schoolIdDocumentUrl', schoolIdDocument.cloudinaryUrl);
+        formData.append('schoolIdDocumentPublicId', schoolIdDocument.publicId || '');
+      } else {
+        console.log('⚠️ No School ID document uploaded');
       }
 
-      if (agreementDocument) {
-        formData.append('agreementDocument', {
-          uri: agreementDocument.uri,
-          type: agreementDocument.type || 'application/pdf',
-          name: agreementDocument.name || 'agreementDocument.pdf'
-        } as any);
+      if (agreementDocument && agreementDocument.cloudinaryUrl) {
+        console.log('📤 Sending Agreement URL:', agreementDocument.cloudinaryUrl);
+        formData.append('agreementDocumentUrl', agreementDocument.cloudinaryUrl);
+        formData.append('agreementDocumentPublicId', agreementDocument.publicId || '');
+      } else {
+        console.log('⚠️ No Agreement document uploaded');
       }
 
-      // Log form data for debugging
-      console.log('FormData content:');
-      for (let [key, value] of (formData as any)._parts) {
-        console.log(key, value);
-      }
+      console.log('📋 About to send loan application with Cloudinary URLs');
 
       const response = await fetch(`${API_URL}/api/loanApplys`, {
         method: 'POST',
@@ -297,6 +337,15 @@ useEffect(() => {
         });
         throw new Error(data.message || `Server error: ${response.status} ${response.statusText}`);
       }
+
+      // Create loan application notification after successful submission
+      await createLoanApplicationNotification(
+        fullName,
+        email,
+        loanTitle,
+        amount,
+        interestRate
+      );
 
       Alert.alert(
         'Application Submitted',
@@ -350,7 +399,6 @@ useEffect(() => {
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title="Loan application" />
       {!loadingLoan && (
         <Text style={styles.applyTitle}>
           Applying for: <Text style={styles.loanTitle}>{loanTitle}</Text>
@@ -534,21 +582,39 @@ useEffect(() => {
 
         {/* Required Documents */}
         <Text style={styles.sectionTitle}>Required documents</Text>
-        <DocumentPickerButton 
-          label="Upload Agreement Document" 
-          onDocumentPicked={setAgreementDocument}
-          value={agreementDocument?.name}
-        />
-        <DocumentPickerButton 
-          label="National ID / Passport" 
-          onDocumentPicked={setIdDocument}
-          value={idDocument?.name}
-        />
-        <DocumentPickerButton 
-          label="School ID" 
-          onDocumentPicked={setSchoolIdDocument}
-          value={schoolIdDocument?.name}
-        />
+        <View>
+          <DocumentPickerButton 
+            label="Upload Agreement Document" 
+            onDocumentPicked={(file) => handleDocumentUpload(file, setAgreementDocument, setUploadingAgreementDocument, 'Agreement Document', setAgreementDocumentError)}
+            value={agreementDocument?.name}
+            loading={uploadingAgreementDocument}
+          />
+          {agreementDocumentError && (
+            <Text style={styles.errorText}>Please add Agreement Document</Text>
+          )}
+        </View>
+        <View>
+          <DocumentPickerButton 
+            label="National ID / Passport" 
+            onDocumentPicked={(file) => handleDocumentUpload(file, setIdDocument, setUploadingIdDocument, 'National ID', setIdDocumentError)}
+            value={idDocument?.name}
+            loading={uploadingIdDocument}
+          />
+          {idDocumentError && (
+            <Text style={styles.errorText}>Please add National ID / Passport</Text>
+          )}
+        </View>
+        <View>
+          <DocumentPickerButton 
+            label="School ID" 
+            onDocumentPicked={(file) => handleDocumentUpload(file, setSchoolIdDocument, setUploadingSchoolIdDocument, 'School ID', setSchoolIdDocumentError)}
+            value={schoolIdDocument?.name}
+            loading={uploadingSchoolIdDocument}
+          />
+          {schoolIdDocumentError && (
+            <Text style={styles.errorText}>Please add School ID</Text>
+          )}
+        </View>
 
         {/* Declaration */}
         <Text style={styles.sectionTitle}>Declaration</Text>

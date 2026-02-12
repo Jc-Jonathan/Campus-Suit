@@ -18,92 +18,19 @@ interface Props {
   showBackButton?: boolean;
 }
 
-export const Header: React.FC<Props> = ({ title, subtitle, right, showBackButton = false }) => {
-  const navigation = useNavigation<HeaderNavigationProp>();
-  const { unreadCount } = useNotifications();
-
-
-  return (
-    <View style={styles.container}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {showBackButton && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 10 }}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-        )}
-        <View>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-        </View>
-      </View>
-      <View style={styles.right}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Profile')}
-          style={{ marginRight: 16, position: 'relative' }}
-        >
-          <Ionicons name="notifications-outline" size={24} color={theme.colors.primary} />
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        {right}
-        <Ionicons name="school-outline" size={22} color={theme.colors.primary} />
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  badge: {
-    position: 'absolute',
-    right: -6,
-    top: -3,
-    backgroundColor: theme.colors.danger,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    marginTop: 2,
-    color: theme.colors.textMuted,
-  },
-  right: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-});
 
 export const HeaderTab: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { logout } = useAuth();
-   const { unreadCount } = useNotifications();
+  const { logout, user } = useAuth();
+  const { unreadCount } = useNotifications();
   const { cart } = useCart();
   const [menuOpen, setMenuOpen] = React.useState(false);
+
+  // Show notifications for all users including admins (for shop notifications)
+  const shouldShowNotifications = user;
+  
+  // Hide cart count for admin users (guest users should see cart count)
+  const shouldShowCartCount = !user?.isAdmin;
 
   const openMenu = () => setMenuOpen(true);
   const closeMenu = () => setMenuOpen(false);
@@ -150,7 +77,7 @@ export const HeaderTab: React.FC = () => {
         <View style={headerTabStyles.right}>
           <TouchableOpacity onPress={goToCart} style={headerTabStyles.cartContainer}>
             <Ionicons name="cart-outline" size={22} color={theme.colors.text} />
-            {cart.length > 0 && (
+            {shouldShowCartCount && cart.length > 0 && (
               <View style={headerTabStyles.cartBadge}>
                 <Text style={headerTabStyles.cartBadgeText}>
                   {cart.reduce((total, item) => total + item.quantity, 0)}
@@ -159,15 +86,15 @@ export const HeaderTab: React.FC = () => {
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={goToNotifications} style={{ position: 'relative' }}>
-       <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
-     {unreadCount > 0 && (
-     <View style={headerTabStyles.cartBadge}>
-      <Text style={headerTabStyles.cartBadgeText}>
-        {unreadCount}
-      </Text>
-    </View>
-  )}
-</TouchableOpacity>
+            <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
+            {shouldShowNotifications && unreadCount > 0 && (
+              <View style={headerTabStyles.notificationBadge}>
+                <Text style={headerTabStyles.notificationBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
         </View>
       </View>
@@ -239,7 +166,7 @@ const headerTabStyles = StyleSheet.create({
     position: 'absolute',
     right: -8,
     top: -5,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: "#ea4f4fff",
     borderRadius: 10,
     width: 18,
     height: 18,
@@ -247,6 +174,22 @@ const headerTabStyles = StyleSheet.create({
     alignItems: 'center',
   },
   cartBadgeText: { 
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    right: -8,
+    top: -5,
+    backgroundColor: theme.colors.danger,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadgeText: {
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',

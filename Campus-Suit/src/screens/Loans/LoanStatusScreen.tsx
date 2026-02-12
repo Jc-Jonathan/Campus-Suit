@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Header } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { AppCard } from '../../components/AppCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { fetchLoanApplications, fetchLoanDetails, LoanApplication } from '../../services/loanService';
@@ -24,7 +24,7 @@ export const LoanStatusScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const API_BASE = 'http://192.168.31.130:5000';
+  const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
   const loadApplications = async () => {
     try {
@@ -101,7 +101,7 @@ export const LoanStatusScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="My Loan Applications" showBackButton={false} />
+      <HeaderTab />
       <View>
         <FlatList
           data={applications}

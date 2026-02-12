@@ -49,7 +49,7 @@ const AdminNotification = () => {
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
-      const res = await fetch('http://192.168.31.130:5000/api/auth/users', {
+      const res = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/users', {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       const data = await res.json();
@@ -65,7 +65,7 @@ const AdminNotification = () => {
   const fetchNotifications = async () => {
     try {
       const res = await fetch(
-        'http://192.168.31.130:5000/api/notifications',
+        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications',
         {
           headers: { Authorization: `Bearer ${userToken}` },
         }
@@ -94,8 +94,8 @@ const AdminNotification = () => {
     }
 
     const url = editingId
-      ? `http://192.168.31.130:5000/api/notifications/${editingId}`
-      : 'http://192.168.31.130:5000/api/notifications';
+      ? `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications/${editingId}`
+      : 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications';
 
     const method = editingId ? 'PUT' : 'POST';
 
@@ -260,7 +260,7 @@ const AdminNotification = () => {
                       style: 'destructive',
                       onPress: async () => {
                         await fetch(
-                          `http://192.168.31.130:5000/api/notifications/${item._id}`,
+                          `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications/${item._id}`,
                           {
                             method: 'DELETE',
                             headers: {

@@ -4,11 +4,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScholarshipsStackParamList } from '../../navigation/ScholarshipsStack';
 import { useNavigation } from '@react-navigation/native';
 import { AppCard } from '../../components/AppCard';
-import { Header, HeaderTab } from '../../components/Header';
+import { HeaderTab } from '../../components/Header';
 import { Loader } from '../../components/Loader';
 import { theme } from '../../theme/theme';
 
-const BASE_URL = 'http://192.168.31.130:5000';
+const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
 
 export type ScholarshipListProps = NativeStackScreenProps<
   ScholarshipsStackParamList,
@@ -71,7 +71,7 @@ export const ScholarshipListScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <HeaderTab />
-      <Header title="Scholarships" subtitle="Find opportunities that fit you" />
+      <Text style={styles.pageTitle}>Available Scholarships</Text>
       <FlatList
         contentContainerStyle={styles.list}
         data={scholarships}
@@ -125,6 +125,17 @@ export const ScholarshipListScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginTop:2,
+    marginLeft:-10,
+    marginBottom: theme.spacing.lg,
+    letterSpacing: 0.5,
+    textTransform: 'capitalize',
+  },
   list: { padding: theme.spacing.lg },
   headerRow: {
     flexDirection: 'row',

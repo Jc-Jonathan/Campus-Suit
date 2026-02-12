@@ -51,15 +51,22 @@ const BUTTON_LABELS: Record<string, string> = {
   store: 'Browse store',
 };
 
-export const HomeScreen: React.FC = () => {
+export const HomeScreen = () => {
+  const navigation = useNavigation();
+  const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const scrollRef = useRef<ScrollView | null>(null);
-  const navigation = useNavigation<any>();
+  const activeIndexRef = useRef(0);
+
+  // Update ref when activeIndex changes
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [homeBanners, setHomeBanners] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://192.168.31.130:5000/api/banners?screen=HOME&position=CAROUSEL')
+    fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/banners?screen=HOME&position=CAROUSEL')
       .then(res => res.json())
       .then(json => setHomeBanners(json.data || []))
       .catch(console.error);
@@ -67,13 +74,14 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const nextIndex = (activeIndex + 1) % CARDS.length;
+      const nextIndex = (activeIndexRef.current + 1) % CARDS.length;
       scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
       setActiveIndex(nextIndex);
+      activeIndexRef.current = nextIndex;
     }, 4500);
 
     return () => clearInterval(interval);
-  }, [activeIndex]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -257,6 +265,8 @@ const styles = StyleSheet.create({
   bannerImage: {
     height: 200,
     width: '100%',
+    resizeMode: 'cover', // ✅ Prevent zooming, maintain aspect ratio
+    borderRadius: 18, // ✅ Match card border radius
   },
 
   bannerOverlay: {
@@ -310,5 +320,7 @@ const styles = StyleSheet.create({
   modalImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain', // ✅ Show full image without zooming
+    borderRadius: 12, // ✅ Add nice border radius
   },
 });

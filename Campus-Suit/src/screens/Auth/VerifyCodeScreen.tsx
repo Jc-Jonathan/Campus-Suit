@@ -23,7 +23,7 @@ export const VerifyCodeScreen = ({ route }: any) => {
     setLoading(true);
     try {
       const res = await fetch(
-        'http://192.168.31.130:5000/api/auth/reset-password',
+        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/reset-password',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 
 interface CartItem {
   productId: number;
@@ -32,41 +33,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cart, setCart] = useState<CartItem[]>([]);
   const [directCheckoutItems, setDirectCheckoutItems] = useState<CartItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { user, isLoggedIn } = useAuth();
 
-  // Get current user ID (you might want to get this from your auth context)
+  // Get current user ID based on auth state
   const getCurrentUserId = async (): Promise<string> => {
     try {
-      // Try to get user ID from AsyncStorage (you should replace this with your actual auth logic)
-      const userId = await AsyncStorage.getItem('currentUserId');
-      if (userId) return userId;
+      // If user is logged in as student, use their email
+      if (isLoggedIn && user && !user.isAdmin && user.email) {
+        return `student_${user.email}`;
+      }
       
-      // If no user ID found, generate a temporary one for guest users
-      const guestId = await getOrCreateGuestId();
-      return guestId;
+      // If user is admin, use admin identifier (cart won't persist)
+      if (isLoggedIn && user && user.isAdmin) {
+        return `admin_${user.email || 'admin'}`;
+      }
+      
+      // For guest users, use a temporary session-based ID
+      return 'guest_session';
     } catch (error) {
       console.error('Error getting user ID:', error);
-      return 'guest';
-    }
-  };
-
-  // Get or create guest ID for anonymous users
-  const getOrCreateGuestId = async (): Promise<string> => {
-    try {
-      let guestId = await AsyncStorage.getItem('guestId');
-      if (!guestId) {
-        guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await AsyncStorage.setItem('guestId', guestId);
-      }
-      return guestId;
-    } catch (error) {
-      console.error('Error creating guest ID:', error);
-      return 'guest_default';
+      return 'guest_session';
     }
   };
 
   // Load cart data for current user
   const loadCartForUser = async (userId: string) => {
     try {
+      // Don't load persisted cart for admin users or guest sessions
+      if (userId.startsWith('admin_') || userId === 'guest_session') {
+        setCart([]);
+        setDirectCheckoutItems([]);
+        return;
+      }
+      
       const cartKey = `cart_${userId}`;
       const savedCart = await AsyncStorage.getItem(cartKey);
       if (savedCart) {
@@ -92,6 +91,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save cart data for current user
   const saveCartForUser = async (userId: string, cartData: CartItem[]) => {
     try {
+      // Don't persist cart for admin users or guest sessions
+      if (userId.startsWith('admin_') || userId === 'guest_session') {
+        return;
+      }
+      
       const cartKey = `cart_${userId}`;
       await AsyncStorage.setItem(cartKey, JSON.stringify(cartData));
     } catch (error) {
@@ -102,6 +106,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save direct checkout items for current user
   const saveDirectCheckoutForUser = async (userId: string, items: CartItem[]) => {
     try {
+      // Don't persist direct checkout for admin users or guest sessions
+      if (userId.startsWith('admin_') || userId === 'guest_session') {
+        return;
+      }
+      
       const directCheckoutKey = `direct_checkout_${userId}`;
       await AsyncStorage.setItem(directCheckoutKey, JSON.stringify(items));
     } catch (error) {
@@ -109,7 +118,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Initialize cart on mount
+  // Initialize cart on mount and when auth state changes
   useEffect(() => {
     const initializeCart = async () => {
       const userId = await getCurrentUserId();
@@ -117,7 +126,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await loadCartForUser(userId);
     };
     initializeCart();
-  }, []);
+  }, [isLoggedIn, user]); // Re-initialize when auth state changes
 
   // Save cart whenever it changes
   useEffect(() => {
@@ -135,8 +144,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Method to switch user (call this when user logs in/out)
   const switchUser = async (userId: string) => {
-    // Save current user's cart before switching
-    if (currentUserId) {
+    // Save current user's cart before switching (only if it's a persistable user)
+    if (currentUserId && !currentUserId.startsWith('admin_') && currentUserId !== 'guest_session') {
       await saveCartForUser(currentUserId, cart);
       await saveDirectCheckoutForUser(currentUserId, directCheckoutItems);
     }
@@ -144,7 +153,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Load new user's cart
     setCurrentUserId(userId);
     await loadCartForUser(userId);
-    await AsyncStorage.setItem('currentUserId', userId);
   };
 
   // Method to clear cart for current user only

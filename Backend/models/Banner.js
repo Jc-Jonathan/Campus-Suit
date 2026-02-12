@@ -8,6 +8,12 @@ const BannerSchema = new mongoose.Schema({
     required: true,
   },
 
+  // ✅ NEW: Cloudinary fields
+  publicId: {
+    type: String,
+    required: false,
+  },
+
   screen: {
     type: String,
     enum: [

@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const ScholarshipApplication = require('../models/ScholarshipApplication');
 const sendEmail = require('../utils/sendEmail');
 
@@ -24,26 +22,6 @@ async function getNextApplicationId() {
 
   return expectedId;
 }
-
-/* =========================
-   MULTER SETUP
-========================= */
-const uploadPath = path.join(__dirname, '../uploads/documents');
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
 
 /* =========================
    GET ALL APPLICATIONS
@@ -173,65 +151,92 @@ router.delete('/:id', async (req, res) => {
 /* =========================
    CREATE APPLICATION
 ========================= */
-router.post(
-  '/',
-  upload.fields([
-    { name: 'nationalId', maxCount: 1 },
-    { name: 'transcript', maxCount: 1 },
-    { name: 'recommendation', maxCount: 1 },
-    { name: 'enrollmentProof', maxCount: 1 },
-    { name: 'other', maxCount: 1 },
-  ]),
-  async (req, res) => {
-    try {
-      const files = req.files || {};
-      const nextId = await getNextApplicationId();
+const multer = require('multer');
 
-      const application = new ScholarshipApplication({
-  applicationId: nextId,
-
-  // ✅ Scholarship details (REQUIRED)
-  scholarshipId: req.body.scholarshipId,
-  scholarshipTitle: req.body.scholarshipTitle,
-
-  // ✅ Applicant Information
-  fullName: req.body.fullName,
-  dob: req.body.dob,
-  country: req.body.country,
-  countryCode: req.body.countryCode,
-  phoneLocal: req.body.phoneLocal,
-  gender: req.body.gender,
-  email: req.body.email,
-  address: req.body.address,
-
-  // ✅ Academic Information
-  studentId: req.body.studentId,
-  institution: req.body.institution,
-  program: req.body.program,
-  yearOfStudy: req.body.yearOfStudy,
-  expectedGraduation: req.body.expectedGraduation,
-  gpa: req.body.gpa,
-
-  // Document URLs
-  nationalIdUrl: files.nationalId?.[0] ? `/uploads/documents/${files.nationalId[0].filename}` : '',
-  transcriptUrl: files.transcript?.[0] ? `/uploads/documents/${files.transcript[0].filename}` : '',
-  recommendationUrl: files.recommendation?.[0] ? `/uploads/documents/${files.recommendation[0].filename}` : '',
-  enrollmentProofUrl: files.enrollmentProof?.[0] ? `/uploads/documents/${files.enrollmentProof[0].filename}` : '',
-  otherDocumentUrl: files.other?.[0] ? `/uploads/documents/${files.other[0].filename}` : '',
-
+// Configure multer to handle FormData without file storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-      await application.save();
+router.post('/', upload.none(), async (req, res) => {
+  try {
+    const nextId = await getNextApplicationId();
 
-      res.status(201).json({
-        message: 'Scholarship application submitted successfully',
-        application,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
-    }
+    console.log('📝 Received form data:', {
+      scholarshipId: req.body.scholarshipId,
+      scholarshipTitle: req.body.scholarshipTitle,
+      fullName: req.body.fullName,
+      email: req.body.email,
+      documentsCount: [
+        req.body.nationalIdUrl ? 'National ID' : null,
+        req.body.transcriptUrl ? 'Transcript' : null,
+        req.body.recommendationUrl ? 'Recommendation' : null,
+        req.body.enrollmentProofUrl ? 'Enrollment Proof' : null,
+        req.body.otherUrl ? 'Other' : null,
+      ].filter(Boolean).length
+    });
+
+    const application = new ScholarshipApplication({
+      applicationId: nextId,
+
+      // ✅ Scholarship details (REQUIRED)
+      scholarshipId: req.body.scholarshipId || '',
+      scholarshipTitle: req.body.scholarshipTitle || '',
+
+      // ✅ Applicant Information
+      fullName: req.body.fullName || '',
+      dob: req.body.dob || '',
+      country: req.body.country || '',
+      countryCode: req.body.countryCode || '',
+      phoneLocal: req.body.phoneLocal || '',
+      gender: req.body.gender || '',
+      email: req.body.email || '',
+      address: req.body.address || '',
+
+      // ✅ Academic Information
+      studentId: req.body.studentId || '',
+      institution: req.body.institution || '',
+      program: req.body.program || '',
+      yearOfStudy: req.body.yearOfStudy || '',
+      expectedGraduation: req.body.expectedGraduation || '',
+      gpa: req.body.gpa || '',
+
+      // ✅ Cloudinary Document URLs and Public IDs
+      nationalIdUrl: req.body.nationalIdUrl || '',
+      nationalIdPublicId: req.body.nationalIdPublicId || '',
+      transcriptUrl: req.body.transcriptUrl || '',
+      transcriptPublicId: req.body.transcriptPublicId || '',
+      recommendationUrl: req.body.recommendationUrl || '',
+      recommendationPublicId: req.body.recommendationPublicId || '',
+      enrollmentProofUrl: req.body.enrollmentProofUrl || '',
+      enrollmentProofPublicId: req.body.enrollmentProofPublicId || '',
+      otherDocumentUrl: req.body.otherUrl || '',
+      otherDocumentPublicId: req.body.otherPublicId || '',
+    });
+
+    await application.save();
+
+    console.log('✅ Scholarship application created with Cloudinary URLs:', {
+      applicationId: nextId,
+      email: req.body.email,
+      documentsCount: [
+        req.body.nationalIdUrl ? 'National ID' : null,
+        req.body.transcriptUrl ? 'Transcript' : null,
+        req.body.recommendationUrl ? 'Recommendation' : null,
+        req.body.enrollmentProofUrl ? 'Enrollment Proof' : null,
+        req.body.otherUrl ? 'Other' : null,
+      ].filter(Boolean).length
+    });
+
+    res.status(201).json({
+      message: 'Scholarship application submitted successfully',
+      application,
+    });
+  } catch (error) {
+    console.error('❌ Error creating scholarship application:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
-);
+});
 
 module.exports = router;

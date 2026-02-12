@@ -1,10 +1,12 @@
 // OrderDetailshow.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Image, Linking, Share, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Order } from '../../../types';
 import { orderAPI } from '../../../utils/api';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 interface RouteParams {
   orderId: number;
@@ -14,7 +16,7 @@ export const OrderDetailshow: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { orderId } = route.params as RouteParams;
-  
+    
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -71,11 +73,35 @@ export const OrderDetailshow: React.FC = () => {
   const handleViewPaymentProof = async () => {
     if (order?.paymentDocumentUrl) {
       try {
-        const supported = await Linking.canOpenURL(order.paymentDocumentUrl);
-        if (supported) {
-          await Linking.openURL(order.paymentDocumentUrl);
+        const fileUrl = order.paymentDocumentUrl;
+        
+        // Check if it's a local file URL
+        if (fileUrl.startsWith('file://')) {
+          // For local files, use Sharing API instead of Linking
+          try {
+            // Check if file exists
+            const fileInfo = await FileSystem.getInfoAsync(fileUrl);
+            if (fileInfo.exists) {
+              await Sharing.shareAsync(fileUrl, {
+                mimeType: 'image/jpeg',
+                dialogTitle: 'Payment Proof',
+                UTI: 'public.image'
+              });
+            } else {
+              Alert.alert('Error', 'Payment proof file not found');
+            }
+          } catch (shareError) {
+            console.error('Error sharing local file:', shareError);
+            Alert.alert('Error', 'Unable to open payment proof file');
+          }
         } else {
-          Alert.alert('Error', 'Cannot open this payment document');
+          // For remote URLs, use the existing browser approach
+          const supported = await Linking.canOpenURL(fileUrl);
+          if (supported) {
+            await Linking.openURL(fileUrl);
+          } else {
+            Alert.alert('Error', 'Cannot open this payment document');
+          }
         }
       } catch (error) {
         console.error('Error opening payment document:', error);
@@ -107,6 +133,22 @@ export const OrderDetailshow: React.FC = () => {
       
       // Update local state
       setOrder({ ...order, status: newStatus });
+      
+      // Create notification for the customer
+      const itemCount = order.items?.length || 0;
+      
+      // Create structured items data for proper display
+      const itemsData = order.items?.map((item, index) => ({
+        id: index + 1,
+        productName: item.productName,
+        productImage: item.productImage,
+        price: item.price,
+        quantity: item.quantity
+      })) || [];
+      
+      const notificationMessage = `Hello ${order.name || 'Customer'},\n\nYour order of ${itemCount} item${itemCount !== 1 ? 's' : ''} has been ${newStatus.toUpperCase()}\n\nTotal amount: $${order.totalAmount?.toFixed(2) || '0.00'}`;
+      
+     
       
       // Show success message with email notification info
       Alert.alert(

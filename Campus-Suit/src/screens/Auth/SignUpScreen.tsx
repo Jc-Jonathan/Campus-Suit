@@ -62,7 +62,7 @@ export const SignUpScreen = () => {
 
     try {
       const response = await fetch(
-        'http://192.168.31.130:5000/api/auth/signup',
+        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/signup',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

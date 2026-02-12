@@ -49,22 +49,44 @@ type Notification = {
     status: 'approved' | 'rejected';
   };
   loanInfo?: {
-    loanTitle: string;
-    originalAmount: number;
-    currentAmount: number;
-    interestRate: number;
-    repaymentPeriod: string;
-    reader: string;
-    type: 'amount_increase' | 'repayment_completed';
+    loanTitle?: string;
+    originalAmount?: number;
+    currentAmount?: number;
+    interestRate?: number;
+    repaymentPeriod?: string;
+    reader?: string;
+    type?: 'amount_increase' | 'repayment_completed';
+    applicantName?: string;
+    applicantEmail?: string;
+    loanName?: string;
+    amount?: string;
+    message?: string;
   };
+  scholarshipInfo?: {
+    applicantName: string;
+    applicantEmail: string;
+    scholarshipName: string;
+    courseName: string;
+    message: string;
+  };
+  shopInfo?: {
+    orderItems: any[];
+    totalPrice: number;
+    customerName: string;
+    customerEmail: string;
+  };
+  targetUser?: string;
+  targetUsers?: string[];
 };
 
 export default function NotificationScreen() {
   const {
     notifications,
+    unreadCount,
     fetchNotifications,
     fetchUnreadCount,
     markAsRead,
+    refreshNotifications,
   } = useNotifications();
 
   const { user } = useAuth();
@@ -72,8 +94,150 @@ export default function NotificationScreen() {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Debug: Log notifications when they change
+  useEffect(() => {
+    console.log('📋 Notifications loaded:', {
+      count: notifications.length,
+      userEmail: user?.email,
+      notifications: notifications.map((n: Notification) => ({
+        id: n._id,
+        category: n.category,
+        message: n.message?.substring(0, 50) + '...',
+        hasShopInfo: !!n.shopInfo,
+        hasOrderDetails: !!n.orderDetails,
+        targetUsers: n.targetUsers
+      }))
+    });
+  }, [notifications, user?.email]);
+
+  // Helper function to render formatted message with colored text
+  const renderFormattedMessage = (message: string, category: string, item: any) => {
+    const userId = user?._id || user?.userId?.toString() || '';
+    const isRead = item.readBy?.includes(userId);
+    
+    const messageStyle = isRead ? styles.readText : styles.unreadText;
+
+    if (category === 'SCHOLARSHIP' && item.scholarshipInfo) {
+      return (
+        <Text style={[styles.message, messageStyle]}>
+          Hello {item.scholarshipInfo.applicantName},
+          {'\n\n'}
+          Congradulation on your application for 
+          <Text style={styles.highlightedText}> {item.scholarshipInfo.scholarshipName} </Text> 
+          taking 
+          <Text style={styles.highlightedText}> {item.scholarshipInfo.courseName} </Text> 
+          always check your email for further process
+        </Text>
+      );
+    }
+    
+    if (category === 'LOAN' && item.loanInfo) {
+      // Check if this is a loan application notification or a repayment notification
+      if (item.loanInfo.type === 'amount_increase' || item.loanInfo.type === 'repayment_completed') {
+        // This is a repayment/amount increase notification - show simplified message by default
+        const readerName = item.loanInfo.reader || item.loanInfo.applicantName || 'User';
+        const simpleMessage = item.loanInfo.type === 'amount_increase' 
+          ? `Your available balance has been increased.`
+          : `Your repayment period has been reached. Make sure you complete all the payment.`;
+        
+        return (
+          <>
+            <Text style={[styles.message, messageStyle]}>
+              Hello {readerName},
+              {'\n\n'}
+              {simpleMessage}
+            </Text>
+            
+            {/* Expanded loan details */}
+            {expandedIds.has(item._id) && (
+              <Text style={[styles.expandedLoanDetails, messageStyle]}>
+                {item.loanInfo.type === 'amount_increase' 
+                  ? `Note your available balance has been increased from $${item.loanInfo.originalAmount?.toLocaleString() || '0'} to $${item.loanInfo.currentAmount?.toLocaleString() || '0'} by ${item.loanInfo.interestRate || '0'}% per ${item.loanInfo.repaymentPeriod?.split(' ')[1] || 'month'}`
+                  : `Original amount: $${item.loanInfo.originalAmount?.toLocaleString() || '0'}, Current amount: $${item.loanInfo.currentAmount?.toLocaleString() || '0'}`
+                }
+              </Text>
+            )}
+          </>
+        );
+      } else {
+        // This is a loan application notification - show simplified message by default
+        const applicantName = item.loanInfo.applicantName || 'User';
+        
+        return (
+          <>
+            <Text style={[styles.message, messageStyle]}>
+              Hello {applicantName},
+              {'\n\n'}
+              Congradulation on your application for {item.loanInfo.loanName || 'loan'}.
+            </Text>
+            
+            {/* Expanded loan application details */}
+            {expandedIds.has(item._id) && (
+              <Text style={[styles.expandedLoanDetails, messageStyle]}>
+                Congratulations on your application for 
+                <Text style={styles.highlightedText}> {item.loanInfo.loanName || 'loan'} </Text> 
+                under this 
+                <Text style={styles.highlightedText}> {item.loanInfo.interestRate}% </Text> 
+                interest rate for this 
+                <Text style={styles.highlightedText}> ${item.loanInfo.amount} </Text> 
+                amount always check your email for further process
+              </Text>
+            )}
+          </>
+        );
+      }
+    }
+    
+    if (category === 'SHOP' && (item.shopInfo || item.orderDetails)) {
+      const customerName = item.shopInfo?.customerName || item.orderDetails?.customerName || 'Customer';
+      const itemCount = item.shopInfo?.orderItems?.length || item.orderDetails?.items?.length || 0;
+      const totalAmount = item.shopInfo?.totalPrice || item.orderDetails?.totalAmount || 0;
+      const status = item.shopInfo?.status || item.orderDetails?.status;
+      
+      // Debug: Log the actual data structure
+      console.log('🔍 Shop notification data:', {
+        item: item,
+        shopInfo: item.shopInfo,
+        orderDetails: item.orderDetails,
+        customerName,
+        itemCount,
+        totalAmount,
+        status
+      });
+      
+      return (
+        <>
+          <Text style={[styles.message, messageStyle]}>
+            Hello {customerName},
+            {'\n\n'}
+            Your order of {itemCount} items has been {status?.toUpperCase() || 'PLACED'}
+            {'\n\n'}
+            Total amount: ${totalAmount.toFixed(2)}
+            {'\n\n'}
+            <Text style={styles.showMoreText}>Show More</Text>
+          </Text>
+          
+          {/* Email check message when expanded */}
+          {item.category === 'SHOP' && expandedIds.has(item._id) && (
+            <View style={styles.orderDetailsContainer}>
+              <Text style={[styles.message, messageStyle]}>
+                Check your email
+              </Text>
+            </View>
+          )}
+        </>
+      );
+    }
+    
+    // Default message rendering for other categories
+    return (
+      <Text style={[styles.message, messageStyle]}>
+        {message}
+      </Text>
+    );
+  };
 
   /* ================= FETCH BASED ON FILTER ================= */
   const loadNotifications = async () => {
@@ -81,14 +245,8 @@ export default function NotificationScreen() {
       setRefreshing(true);
       setLoading(true);
 
-      // Always fetch specific category based on filter
-      if (filter === 'ALL') {
-        await fetchNotifications('ALL');
-      } else {
-        await fetchNotifications(filter);
-      }
-
-      await fetchUnreadCount();
+      // Use the new refreshNotifications function for better performance
+      await refreshNotifications();
       
       // Debug: Log notifications data
       console.log('Loaded notifications:', notifications);
@@ -103,10 +261,94 @@ export default function NotificationScreen() {
     }
   };
 
-  // Filter notifications based on selected category
+  // Helper function to get empty state message for each category
+  const getEmptyMessage = () => {
+    switch (filter) {
+      case 'ANNOUNCEMENT':
+        return 'No announcements available';
+      case 'SCHOLARSHIP':
+        return 'No scholarship notifications';
+      case 'SHOP':
+        return 'No shop notifications';
+      case 'LOAN':
+        return 'No loan notifications';
+      default:
+        return 'No notifications found';
+    }
+  };
+
+  // Helper function to determine if a notification should be shown to the current user
+  const shouldShowNotification = (notification: Notification, userEmail?: string) => {
+    // For announcements, show to all users
+    if (notification.category === 'ANNOUNCEMENT') {
+      return true;
+    }
+    
+    // For loan notifications, check if the notification belongs to the current user
+    if (notification.category === 'LOAN') {
+      // Check if notification has loanInfo with applicantEmail that matches current user
+      if (notification.loanInfo?.applicantEmail) {
+        return notification.loanInfo.applicantEmail === userEmail;
+      }
+      // Check if notification has reader field that matches current user
+      if (notification.loanInfo?.reader) {
+        return notification.loanInfo.reader === userEmail;
+      }
+    }
+    
+    // For scholarship notifications, check if the notification belongs to the current user
+    if (notification.category === 'SCHOLARSHIP') {
+      if (notification.scholarshipInfo?.applicantEmail) {
+        return notification.scholarshipInfo.applicantEmail === userEmail;
+      }
+    }
+    
+    // For shop notifications, check if the notification belongs to the current user
+    if (notification.category === 'SHOP') {
+      // Check if current user's email is in the targetUsers array
+      if (notification.targetUsers && notification.targetUsers.length > 0 && userEmail) {
+        return notification.targetUsers.includes(userEmail);
+      }
+      // Check if notification has shopInfo with customerEmail that matches current user
+      if (notification.shopInfo?.customerEmail) {
+        return notification.shopInfo.customerEmail === userEmail;
+      }
+      // Fallback to old logic for backward compatibility
+      if (notification.targetUser) {
+        return notification.targetUser === userEmail;
+      }
+    }
+    
+    // Default: show notification if no specific email filtering is required
+    return true;
+  };
+
+  // Filter notifications based on selected category and user email
   const filteredNotifications = filter === 'ALL' 
-    ? notifications.filter((notification: Notification) => notification.category === 'ALL')
-    : notifications.filter((notification: Notification) => notification.category === filter);
+    ? notifications.filter((notification: Notification) => {
+        // Additional client-side filtering to ensure user-specific notifications
+        const shouldShow = shouldShowNotification(notification, user?.email);
+        console.log('🔍 Filtering notification (ALL):', {
+          id: notification._id,
+          category: notification.category,
+          message: notification.message?.substring(0, 50) + '...',
+          userEmail: user?.email,
+          shouldShow: shouldShow
+        });
+        return shouldShow;
+      })
+    : notifications.filter((notification: Notification) => {
+        const shouldShow = notification.category === filter && shouldShowNotification(notification, user?.email);
+        console.log('🔍 Filtering notification (FILTERED):', {
+          id: notification._id,
+          category: notification.category,
+          filter: filter,
+          message: notification.message?.substring(0, 50) + '...',
+          userEmail: user?.email,
+          shouldShow: shouldShow
+        });
+        return shouldShow;
+      });
 
   const toggleExpanded = async (id: string) => {
     setExpandedIds(prev => {
@@ -118,7 +360,7 @@ export default function NotificationScreen() {
         
         // For shop notifications, fetch complete order details if needed
         const notification = notifications.find((n: Notification) => n._id === id);
-        if (notification?.category === 'SHOP' && (!notification.orderDetails?.orderId)) {
+        if (notification?.category === 'SHOP' && (!notification.orderDetails?.orderId) && (!notification.shopInfo?.orderItems)) {
           try {
             console.log('Fetching complete order details for notification:', id);
             // We could add an API call here to fetch complete order details
@@ -204,10 +446,36 @@ export default function NotificationScreen() {
     );
   }
 
-  if (notifications.length === 0) {
+  if (filteredNotifications.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text>No notifications found</Text>
+      <View style={{ flex: 1 }}>
+        {/* FILTER - Always show categories */}
+        <View style={styles.filterRow}>
+          {['ALL', 'ANNOUNCEMENT', 'SCHOLARSHIP', 'SHOP', 'LOAN'].map(f => (
+            <TouchableOpacity
+              key={f}
+              style={[
+                styles.filterBtn,
+                filter === f && styles.filterActive,
+              ]}
+              onPress={() => setFilter(f as FilterType)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === f && styles.filterTextActive,
+                ]}
+              >
+                {f === 'ALL' ? 'All' : f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        
+        {/* EMPTY STATE */}
+        <View style={styles.centered}>
+          <Text style={styles.emptyMessage}>{getEmptyMessage()}</Text>
+        </View>
       </View>
     );
   }
@@ -249,21 +517,50 @@ export default function NotificationScreen() {
           />
         }
         contentContainerStyle={styles.list}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyListContainer}>
+            <Text style={styles.emptyMessage}>{getEmptyMessage()}</Text>
+          </View>
+        )}
         renderItem={({ item }) => {
-          const unread =
-            !readIds.has(item._id) &&
-            !item.readBy?.includes(user?._id || '');
+          const userId = user?._id || user?.userId?.toString() || '';
+          const unread = !item.readBy?.includes(userId);
+
+          // Debug log for all notifications
+          console.log('🔍 Rendering notification item:', {
+            id: item._id,
+            category: item.category,
+            message: item.message?.substring(0, 50) + '...',
+            unread: unread,
+            hasShopInfo: !!item.shopInfo,
+            hasOrderDetails: !!item.orderDetails
+          });
+
+          // Debug log for shop notifications
+          if (item.category === 'SHOP') {
+            console.log('Shop Notification Item:', {
+              id: item._id,
+              shopInfo: item.shopInfo,
+              orderDetails: item.orderDetails,
+              hasShopInfo: !!item.shopInfo,
+              hasOrderDetails: !!item.orderDetails,
+              orderItems: item.shopInfo?.orderItems || item.orderDetails?.items
+            });
+          }
 
           return (
             <TouchableOpacity
               style={[styles.card, unread && styles.unreadCard]}
               activeOpacity={0.85}
-              onPress={() => {
-                setReadIds(prev => new Set(prev).add(item._id));
-                markAsRead(item._id);
+              onPress={async () => {
+                if (unread) {
+                  await markAsRead(item._id);
+                  // Refresh notifications to get updated read state
+                  await loadNotifications();
+                }
                 
-                // Toggle expansion for shop notifications
-                if (item.category === 'SHOP' && item.orderDetails) {
+                // Toggle expansion for shop and loan notifications
+                if ((item.category === 'SHOP' && (item.shopInfo || item.orderDetails)) || (item.category === 'LOAN' && item.loanInfo)) {
                   toggleExpanded(item._id);
                 }
               }}
@@ -274,53 +571,37 @@ export default function NotificationScreen() {
               </View>
 
               {/* MESSAGE */}
-              <Text style={[styles.message, unread && styles.unreadText]}>
-                {item.message}
-              </Text>
+              {(() => {
+                console.log('🔍 About to render message:', {
+                  message: item.message,
+                  category: item.category,
+                  hasShopInfo: !!item.shopInfo,
+                  hasOrderDetails: !!item.orderDetails
+                });
+                return renderFormattedMessage(item.message, item.category, item);
+              })()}
 
-              {/* SHOW MORE BUTTON FOR SHOP NOTIFICATIONS */}
-              {item.category === 'SHOP' && item.orderDetails && !expandedIds.has(item._id) && (
-                <TouchableOpacity 
-                  style={styles.showMoreButton}
-                  onPress={() => toggleExpanded(item._id)}
-                >
-                  <Text style={styles.showMoreText}>Show More</Text>
-                </TouchableOpacity>
+                            
+              {/* SHOW MORE/SHOW LESS BUTTON FOR LOAN NOTIFICATIONS */}
+              {item.category === 'LOAN' && item.loanInfo && (
+                !expandedIds.has(item._id) ? (
+                  <TouchableOpacity 
+                    style={styles.showMoreButton}
+                    onPress={() => toggleExpanded(item._id)}
+                  >
+                    <Text style={styles.showMoreText}>Show More</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.showMoreButton}
+                    onPress={() => toggleExpanded(item._id)}
+                  >
+                    <Text style={styles.showMoreText}>Show Less</Text>
+                  </TouchableOpacity>
+                )
               )}
 
-              {/* SHOP NOTIFICATION - EXPANDABLE PRODUCT DETAILS */}
-              {item.category === 'SHOP' && item.orderDetails && expandedIds.has(item._id) && (
-                <View style={styles.orderDetailsContainer}>
-                  <View style={styles.orderHeader}>
-                    <Text style={styles.orderId}>Order #{item.orderDetails.orderId}</Text>
-                    <Text style={styles.orderStatus}>{item.orderDetails.status ? item.orderDetails.status.toUpperCase() : 'UNKNOWN'}</Text>
-                  </View>
-                  
-                  {item.orderDetails.items && item.orderDetails.items.map((product, index) => (
-                    <View key={index} style={styles.productItem}>
-                      <Image 
-                        source={{ uri: product.productImage }} 
-                        style={styles.productImage}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.productInfo}>
-                        <Text style={styles.productName}>{product.productName || 'Product Name'}</Text>
-                        <Text style={styles.productPrice}>${product.price || '0.00'}</Text>
-                        <Text style={styles.productQuantity}>Quantity: {product.quantity || '0'}</Text>
-                        <Text style={styles.itemTotal}>
-                          Total: ${((product.price || 0) * (product.quantity || 0)).toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                  
-                  <View style={styles.orderTotal}>
-                    <Text style={styles.totalLabel}>Order Total:</Text>
-                    <Text style={styles.totalAmount}>${(item.orderDetails.totalAmount || 0).toFixed(2)}</Text>
-                  </View>
-                </View>
-              )}
-
+              
               {/* SCHOLARSHIP NOTIFICATION - APPLICANT DETAILS */}
               {item.category === 'SCHOLARSHIP' && item.applicantInfo && (
                 <View style={styles.scholarshipDetailsContainer}>
@@ -347,11 +628,11 @@ export default function NotificationScreen() {
                 </View>
               )}
 
-              {/* LOAN NOTIFICATION - LOAN DETAILS */}
-              {item.category === 'LOAN' && item.loanInfo && (
+              {/* LOAN NOTIFICATION - LOAN DETAILS (ONLY SHOW WHEN EXPANDED) */}
+              {item.category === 'LOAN' && item.loanInfo && expandedIds.has(item._id) && (
                 <View style={styles.loanDetailsContainer}>
                   <View style={styles.loanHeader}>
-                    <Text style={styles.loanTitle}>{item.loanInfo.loanTitle}</Text>
+                    <Text style={styles.loanTitle}>{item.loanInfo.loanTitle || 'Loan Details'}</Text>
                     <View style={[
                       styles.loanTypeBadge,
                       item.loanInfo.type === 'amount_increase' ? styles.amountIncreaseBadge : styles.repaymentCompletedBadge
@@ -366,10 +647,18 @@ export default function NotificationScreen() {
                   </View>
                   
                   <View style={styles.loanInfo}>
-                    <Text style={styles.loanAmount}>Original: ₹{item.loanInfo.originalAmount.toLocaleString()}</Text>
-                    <Text style={styles.currentLoanAmount}>Current: ₹{item.loanInfo.currentAmount.toLocaleString()}</Text>
-                    <Text style={styles.loanInterest}>Interest: {item.loanInfo.interestRate}% per {item.loanInfo.repaymentPeriod.split(' ')[1]}</Text>
-                    <Text style={styles.loanReader}>To: {item.loanInfo.reader}</Text>
+                    {item.loanInfo.originalAmount && (
+                      <Text style={styles.loanAmount}>Original: ₹{item.loanInfo.originalAmount.toLocaleString()}</Text>
+                    )}
+                    {item.loanInfo.currentAmount && (
+                      <Text style={styles.currentLoanAmount}>Current: ₹{item.loanInfo.currentAmount.toLocaleString()}</Text>
+                    )}
+                    {item.loanInfo.interestRate && (
+                      <Text style={styles.loanInterest}>Interest: {item.loanInfo.interestRate}% per {item.loanInfo.repaymentPeriod?.split(' ')[1] || 'month'}</Text>
+                    )}
+                    {(item.loanInfo.reader) && (
+                      <Text style={styles.loanReader}>To: {item.loanInfo.reader || 'N/A'}</Text>
+                    )}
                   </View>
                 </View>
               )}
@@ -408,6 +697,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f7fa',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  emptyListContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 200,
   },
   filterRow: {
     flexDirection: 'row',
@@ -500,9 +801,18 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 6,
   },
+  highlightedText: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
   unreadText: {
     fontWeight: '600',
     color: '#111827',
+  },
+  readText: {
+    fontWeight: '400',
+    color: '#9ca3af',
+    opacity: 0.7,
   },
   docBox: {
     marginTop: 14,
@@ -767,5 +1077,51 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     fontStyle: 'italic',
+  },
+  expandedLoanDetails: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#374151',
+    marginTop: 6,
+    padding: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  noProductsContainer: {
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  noProductsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  noProductsSubtext: {
+    fontSize: 12,
+    color: '#78350f',
+    textAlign: 'center',
+  },
+  // Status color styles
+  statusCancelled: {
+    color: '#e74c3c',
+  },
+  statusDelivered: {
+    color: '#2ecc71',
+  },
+  statusShipped: {
+    color: '#3498db',
+  },
+  statusConfirmed: {
+    color: '#f39c12',
+  },
+  statusPending: {
+    color: '#f39c12',
   },
 });
