@@ -33,7 +33,7 @@ interface AllProductsProps {
 export const AllProducts = ({ navigation }: AllProductsProps) => {
   const [products, setProducts] = useState<Product[]>([]);
 
-  const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products';
+  const API_URL = 'https://campus-suit-szub.onrender.com/api/products';
 
   // FETCH PRODUCTS
   const fetchProducts = async () => {

@@ -24,7 +24,7 @@ export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth';
+  const API_URL = 'https://campus-suit-szub.onrender.com/api/auth';
 
   const fetchUsers = async () => {
     try {

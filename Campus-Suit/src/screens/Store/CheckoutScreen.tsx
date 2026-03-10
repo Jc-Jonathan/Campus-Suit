@@ -58,7 +58,7 @@ export const CheckoutScreen = ({ route }: any) => {
   const totalAmount = cartTotal + directCheckoutTotal;
 
   useEffect(() => {
-    fetch(`https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/me/${userId}`)
+    fetch(`https://campus-suit-szub.onrender.com/api/auth/me/${userId}`)
       .then(res => res.json())
       .then(user => {
         setEmail(user.email);
@@ -68,7 +68,7 @@ export const CheckoutScreen = ({ route }: any) => {
   }, []);
 
  useEffect(() => {
-  fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/banners?screen=CHECKOUT&position=QR_PAYMENT')
+  fetch('https://campus-suit-szub.onrender.com/api/banners?screen=CHECKOUT&position=QR_PAYMENT')
     .then(res => res.json())
     .then(json => setQrBanner(json.data?.[0] || null))
     .catch(console.error);
@@ -171,7 +171,7 @@ const placeOrder = async () => {
     const subtotal = totalAmount;
 
     const response = await fetch(
-      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/userOrders',
+      'https://campus-suit-szub.onrender.com/api/userOrders',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

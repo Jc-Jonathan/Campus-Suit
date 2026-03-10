@@ -91,7 +91,7 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
     const fetchScholarship = async () => {
       try {
         const res = await fetch(
-          `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarships/${scholarshipId}` 
+          `https://campus-suit-szub.onrender.com/api/scholarships/${scholarshipId}` 
         );
         const json = await res.json();
 
@@ -304,7 +304,7 @@ export const ScholarshipApplyScreen: React.FC<ScholarshipApplyProps> = ({ naviga
         formData.append('otherName', documents.other.name);
       }
 
-      const response = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications', {
+      const response = await fetch('https://campus-suit-szub.onrender.com/api/scholarshipApplications', {
         method: 'POST',
         body: formData,
         headers: {

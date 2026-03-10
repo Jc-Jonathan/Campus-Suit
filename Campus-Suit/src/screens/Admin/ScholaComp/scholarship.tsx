@@ -15,7 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadScholarshipFileToCloudinary, UploadedScholarshipFile } from '../../../utils/uploadScholarshipFile';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarships';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/scholarships';
 
 // Helper function to extract filename from URL
 const extractFileName = (url: string): string => {

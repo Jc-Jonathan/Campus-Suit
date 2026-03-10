@@ -23,7 +23,7 @@ export type ScholarshipDetailProps = NativeStackScreenProps<
   'ScholarshipDetail'
 >;
 
-const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const BASE_URL = 'https://campus-suit-szub.onrender.com';
 
 export const ScholarshipDetailScreen: React.FC<ScholarshipDetailProps> = ({
   route,

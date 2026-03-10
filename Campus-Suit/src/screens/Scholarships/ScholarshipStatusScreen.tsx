@@ -29,7 +29,7 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/scholarshipApplications';
 
 export const ScholarshipStatusScreen: React.FC = () => {
   const { user } = useAuth();

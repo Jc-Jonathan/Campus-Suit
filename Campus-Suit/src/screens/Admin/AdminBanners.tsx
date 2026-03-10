@@ -16,7 +16,7 @@ import { Picker } from '@react-native-picker/picker';
 import { theme } from '../../theme/theme';
 import { uploadImage } from '../../utils/uploadImage';
 
-const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const API_BASE = 'https://campus-suit-szub.onrender.com';
 
 export const AdminBanners: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);

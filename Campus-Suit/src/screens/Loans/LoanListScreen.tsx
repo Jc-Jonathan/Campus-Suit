@@ -15,7 +15,7 @@ import { Header, HeaderTab } from '../../components/Header';
 import { AppCard } from '../../components/AppCard';
 import { theme } from '../../theme/theme';
 
-const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const API_BASE = 'https://campus-suit-szub.onrender.com';
 
 type Loan = {
   loanId: number;

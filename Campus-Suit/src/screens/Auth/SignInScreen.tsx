@@ -90,7 +90,7 @@ export const SignInScreen = () => {
 
     try {
       const response = await fetch(
-        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/login',
+        'https://campus-suit-szub.onrender.com/api/auth/login',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -178,7 +178,7 @@ export const SignInScreen = () => {
 
   try {
     const response = await fetch(
-      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/admin/login',
+      'https://campus-suit-szub.onrender.com/api/admin/login',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

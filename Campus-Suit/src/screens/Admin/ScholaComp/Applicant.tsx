@@ -10,7 +10,7 @@ type ApplicantStackParamList = {
   ApplicantDetail: { id: string };
 };
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/scholarshipApplications';
 
 interface Applicant {
   _id: string;

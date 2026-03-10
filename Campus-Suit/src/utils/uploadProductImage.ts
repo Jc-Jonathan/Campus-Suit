@@ -31,7 +31,7 @@ export const uploadProductImage = async (imageUri: string): Promise<UploadedProd
     
     // Upload to backend (which will handle Cloudinary)
     const response = await fetch(
-      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/upload/product',
+      'https://campus-suit-szub.onrender.com',
       {
         method: 'POST',
         body: formData,

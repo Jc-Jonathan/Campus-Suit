@@ -24,7 +24,7 @@ export const LoanStatusScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+  const API_BASE = 'https://campus-suit-szub.onrender.com';
 
   const loadApplications = async () => {
     try {

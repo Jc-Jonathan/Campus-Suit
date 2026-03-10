@@ -47,7 +47,7 @@ export const NotificationProvider = ({ children }: any) => {
   // Don't fetch notifications for admin users
   const shouldShowNotifications = user && !user.isAdmin;
 
-  const API = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/notifications';
+  const API = 'https://campus-suit-szub.onrender.com';
 
   const fetchNotifications = useCallback(
   async (category?: 'ALL' | 'ANNOUNCEMENT' | 'SCHOLARSHIP' | 'SHOP') => {

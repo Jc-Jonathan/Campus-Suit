@@ -8,7 +8,7 @@ import { HeaderTab } from '../../components/Header';
 import { Loader } from '../../components/Loader';
 import { theme } from '../../theme/theme';
 
-const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const BASE_URL = 'https://campus-suit-szub.onrender.com';
 
 export type ScholarshipListProps = NativeStackScreenProps<
   ScholarshipsStackParamList,

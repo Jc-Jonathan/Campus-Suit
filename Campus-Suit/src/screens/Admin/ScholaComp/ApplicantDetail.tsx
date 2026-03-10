@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import axios from 'axios';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/scholarshipApplications';
-const BASE_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/scholarshipApplications';
+const BASE_URL = 'https://campus-suit-szub.onrender.com';
 
 export interface DetailItemProps {
   label: string;
@@ -80,7 +80,7 @@ const ApplicantDetail = ({ route, navigation }: any) => {
       
       // Try to send email notification (don't fail if this doesn't work)
       try {
-        await axios.post('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/send-email', {
+        await axios.post('https://campus-suit-szub.onrender.com/api/send-email', {
           to: app.email,
           subject: emailSubject,
           message: emailMessage,

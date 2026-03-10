@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys';
+const API_URL = 'https://campus-suit-szub.onrender.com';
 
 export type LoanApplication = {
   _id: string;

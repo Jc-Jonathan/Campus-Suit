@@ -35,7 +35,7 @@ export const PasswordUpdateScreen = () => {
 
   try {
     const res = await fetch(
-      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/forgot-password',
+      'https://campus-suit-szub.onrender.com/api/auth/forgot-password',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

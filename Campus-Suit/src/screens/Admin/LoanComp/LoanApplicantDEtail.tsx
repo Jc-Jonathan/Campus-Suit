@@ -107,7 +107,7 @@ export const LoanApplicantDetail = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys/${applicationId}`,
+        `https://campus-suit-szub.onrender.com/api/loanApplys/${applicationId}`,
         {
           timeout: 10000,
           headers: { 'Content-Type': 'application/json' },
@@ -173,7 +173,7 @@ export const LoanApplicantDetail = () => {
       
       let fileUrl = url;
       if (!url.startsWith('http')) {
-        fileUrl = `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev${url.startsWith('/') ? '' : '/'}${url}`;
+        fileUrl = `https://campus-suit-szub.onrender.com${url.startsWith('/') ? '' : '/'}${url}`;
       }
 
       try {
@@ -284,7 +284,7 @@ export const LoanApplicantDetail = () => {
       
       // Update application status - backend will automatically send email
       const response = await axios.patch(
-        `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys/${appId}`,
+        `https://campus-suit-szub.onrender.com/api/loanApplys/${appId}`,
         { status: newStatus },
         {
           timeout: 15000,

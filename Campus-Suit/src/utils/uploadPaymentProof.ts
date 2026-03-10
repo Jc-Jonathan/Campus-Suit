@@ -31,7 +31,7 @@ export const uploadPaymentProof = async (imageUri: string): Promise<UploadedPaym
     
     // Upload to backend (which will handle Cloudinary)
     const response = await fetch(
-      'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/upload/paymentproof',
+      'https://campus-suit-szub.onrender.com',
       {
         method: 'POST',
         body: formData,

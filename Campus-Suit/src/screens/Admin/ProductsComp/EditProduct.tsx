@@ -29,7 +29,7 @@ export const EditProduct = ({ route, navigation }: any) => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products';
+  const API_URL = 'https://campus-suit-szub.onrender.com/api/products';
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};

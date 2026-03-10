@@ -85,7 +85,7 @@ export const SignUpScreen = () => {
 
     try {
       const response = await fetch(
-        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/signup',
+        'https://campus-suit-szub.onrender.com/api/auth/signup',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

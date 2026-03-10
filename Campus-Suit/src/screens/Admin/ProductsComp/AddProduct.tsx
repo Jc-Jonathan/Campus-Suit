@@ -86,7 +86,7 @@ export const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onSuccess,
     }
 
     try {
-      const response = await fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products/add', {
+      const response = await fetch('https://campus-suit-szub.onrender.com/api/products/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

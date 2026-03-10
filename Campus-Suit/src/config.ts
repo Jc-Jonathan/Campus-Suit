@@ -1,2 +1,2 @@
 // Backend API URL
-export const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+export const API_URL = 'https://campus-suit-szub.onrender.com';

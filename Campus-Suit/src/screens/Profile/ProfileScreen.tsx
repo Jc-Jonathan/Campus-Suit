@@ -19,7 +19,7 @@ import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons, MaterialIcons, Feather, FontAwesome } from '@expo/vector-icons';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/auth';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();

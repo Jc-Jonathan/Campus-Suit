@@ -23,7 +23,7 @@ export const VerifyCodeScreen = ({ route }: any) => {
     setLoading(true);
     try {
       const res = await fetch(
-        'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/auth/reset-password',
+        'https://campus-suit-szub.onrender.com/api/auth/reset-password',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

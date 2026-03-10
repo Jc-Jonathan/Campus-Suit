@@ -68,7 +68,7 @@ export const HomeScreen = () => {
   const [homeBanners, setHomeBanners] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/banners?screen=HOME&position=CAROUSEL')
+    fetch('https://campus-suit-szub.onrender.com/api/banners?screen=HOME&position=CAROUSEL')
       .then(res => res.json())
       .then(json => setHomeBanners(json.data || []))
       .catch(console.error);

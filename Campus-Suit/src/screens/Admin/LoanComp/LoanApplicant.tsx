@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { AdminNavigationProp, AdminStackParamList } from '../../../navigation/AdminStack';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys';
+const API_URL = 'https://campus-suit-szub.onrender.com';
 
 type LoanApplication = {
   _id?: string;

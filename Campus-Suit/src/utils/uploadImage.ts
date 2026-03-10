@@ -1,4 +1,4 @@
-const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const API_BASE = 'https://campus-suit-szub.onrender.com';
 
 export const uploadImage = async (uri: string): Promise<string> => {
   try {

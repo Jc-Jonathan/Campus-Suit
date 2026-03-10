@@ -38,7 +38,7 @@ export const ProductDetailScreen: React.FC = () => {
   const { addToCart, addToDirectCheckout, directCheckoutItems } = useCart();
   const { isLoggedIn, user } = useAuth();
 
-  const API_URL = `https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/products`;
+  const API_URL = `https://campus-suit-szub.onrender.com/api/products`;
 
   useEffect(() => {
     fetch(`${API_URL}/${productId}`)

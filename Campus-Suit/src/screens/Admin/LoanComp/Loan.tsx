@@ -22,7 +22,7 @@ import { uploadLoanAdminDocumentToCloudinary, UploadedLoanAdminDocument } from '
 
 type DocumentResult = DocumentPickerAsset | null;
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loans';
+const API_URL = 'https://campus-suit-szub.onrender.com';
 
 export const Loan = () => {
   const [title, setTitle] = useState('');

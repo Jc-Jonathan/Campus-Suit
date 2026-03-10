@@ -30,7 +30,7 @@ export type LoanDetailProps = NativeStackScreenProps<
 >;
 
 const { width } = Dimensions.get('window');
-const API_BASE = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev';
+const API_BASE = 'https://campus-suit-szub.onrender.com';
 
 export const LoanDetailScreen: React.FC<LoanDetailProps> = ({
   route,

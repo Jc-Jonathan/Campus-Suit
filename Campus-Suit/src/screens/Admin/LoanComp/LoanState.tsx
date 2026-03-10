@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 
-const API_URL = 'https://pandora-cerebrational-nonoccidentally.ngrok-free.dev/api/loanApplys';
+const API_URL = 'https://campus-suit-szub.onrender.com/api/loanApplys';
 
 // Safe type definitions
 type LoanData = {
