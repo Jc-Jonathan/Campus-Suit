@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Lelean-International",
+    "slug": "Campus-Suit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "campussuit",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./assets/images/logo.png",
+
+    "ios": {
+      "supportsTablet": true
+    },
+
+    "android": {
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#0080FF"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo.png"
+    },
+
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0080FF"
+        }
+      ]
+    ]
+  }
+}
