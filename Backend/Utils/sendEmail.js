@@ -8,7 +8,13 @@ const sendEmail = async (to, subject, text) => {
     console.log('Sender Email:', process.env.BREVO_SENDER_EMAIL);
     
     if (!process.env.BREVO_API_KEY) {
+      console.error('❌ Brevo API key not set in environment');
       throw new Error('Brevo API key not set');
+    }
+
+    if (!process.env.BREVO_SENDER_EMAIL) {
+      console.error('❌ Brevo sender email not set in environment');
+      throw new Error('Brevo sender email not set');
     }
 
     // Configure Brevo
@@ -20,7 +26,7 @@ const sendEmail = async (to, subject, text) => {
     const sendSmtpEmail = {
       sender: {
         email: process.env.BREVO_SENDER_EMAIL,
-        name: process.env.BREVO_SENDER_NAME,
+        name: process.env.BREVO_SENDER_NAME || 'Campus Support Suit',
       },
       to: [{ email: to }],
       subject,
@@ -49,7 +55,8 @@ const sendEmail = async (to, subject, text) => {
     console.error('Error details:', {
       message: error.message,
       code: error.code,
-      status: error.status
+      status: error.status,
+      response: error.response?.data
     });
     throw error;
   }

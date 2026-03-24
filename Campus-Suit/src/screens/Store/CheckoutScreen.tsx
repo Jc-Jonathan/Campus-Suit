@@ -51,6 +51,7 @@ export const CheckoutScreen = ({ route }: any) => {
   const [qrBanner, setQrBanner] = useState<any>(null);
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
 
   // Calculate total price for both cart and direct checkout items
   const cartTotal = cart.reduce((sum: number, item: CartItem) => sum + (item.newPrice * item.quantity), 0);
@@ -332,23 +333,26 @@ const placeOrder = async () => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Delivery Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your complete delivery address"
-          value={address}
-          onChangeText={setAddress}
-          multiline
-          numberOfLines={3}
-        />
-        <View style={styles.locationButtonContainer}>
-          <AppButton
-            label="Use Current Location"
-            onPress={getCurrentLocation}
-            variant="outline"
-            leftIcon="location-on"
-            loading={isLoadingLocation}
-            style={styles.locationButton}
+        <View style={styles.addressInputContainer}>
+          <TextInput
+            style={styles.addressInput}
+            placeholder="Enter your complete delivery address"
+            value={address}
+            onChangeText={setAddress}
+            multiline
+            numberOfLines={3}
           />
+          <TouchableOpacity 
+            style={styles.locationIconContainer}
+            onPress={getCurrentLocation}
+            disabled={isLoadingLocation}
+          >
+            {isLoadingLocation ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialIcons name="location-on" size={20} color={colors.primary} />
+            )}
+          </TouchableOpacity>
         </View>
         
         {isMapVisible && location && (
@@ -374,75 +378,97 @@ const placeOrder = async () => {
         )}
       </View>
 
-       {qrBanner && (
-              <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Scan to Pay</Text>
-
-             <Image
-                source={{ uri: qrBanner.imageUrl }}
-               style={{
-                   width: '100%',
-                   height: 220,
-                   borderRadius: 12,
-                 }}
-              resizeMode="contain"
-           />
-        </View>
-         )}
-
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Proof</Text>
-        <Text style={styles.note}>
-          Please upload a clear screenshot of your payment confirmation
-        </Text>
-        
-        <TouchableOpacity 
-          style={styles.uploadBox}
-          onPress={pickImage}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <View style={styles.uploadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : paymentImage ? (
-            <Image 
-              source={{ uri: paymentImage }}
-              style={styles.previewImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.uploadContent}>
-              <MaterialIcons 
-                name="camera-alt" 
-                size={32} 
-                color={colors.primary} 
-                style={styles.uploadIcon}
-              />
-              <Text style={styles.uploadText}>Tap to upload payment proof</Text>
-              <Text style={styles.uploadSubtext}>JPG, PNG (Max 5MB)</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        {uploadError && (
-          <Text style={styles.errorText}>Please add image again</Text>
-        )}
-      </View>
-
-      <View style={styles.buttonContainer}>
-        <AppButton 
-          label={isUploading ? 'Uploading...' : 'Place Order'} 
-          onPress={placeOrder} 
-          disabled={!paymentImage || !address || isUploading}
-        />
-      </View>
       <TouchableOpacity 
         style={styles.paypalButton}
         onPress={() => navigation.navigate('PaypalScreen', { amount: totalAmount })}
       >
         <Text style={styles.paypalButtonText}>Pay with PayPal</Text>
       </TouchableOpacity>
+
+      {/* Another Payment Method Button */}
+      <View style={styles.section}>
+        <TouchableOpacity 
+          style={styles.anotherPaymentButton}
+          onPress={() => setShowPaymentMethods(!showPaymentMethods)}
+        >
+          <Text style={styles.anotherPaymentButtonText}>
+            {showPaymentMethods ? 'Hide Payment Methods' : 'Use Another Payment Method'}
+          </Text>
+          <MaterialIcons 
+            name={showPaymentMethods ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} 
+            size={20} 
+            color={colors.primary} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Payment Methods - Conditionally Rendered */}
+      {showPaymentMethods && (
+        <>
+          {qrBanner && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Scan to Pay</Text>
+
+              <Image
+                source={{ uri: qrBanner.imageUrl }}
+                style={{
+                  width: '100%',
+                  height: 220,
+                  borderRadius: 12,
+                }}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Payment Proof</Text>
+            <Text style={styles.note}>
+              Please upload a clear screenshot of your payment confirmation
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.uploadBox}
+              onPress={pickImage}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <View style={styles.uploadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              ) : paymentImage ? (
+                <Image 
+                  source={{ uri: paymentImage }}
+                  style={styles.previewImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.uploadContent}>
+                  <MaterialIcons 
+                    name="camera-alt" 
+                    size={32} 
+                    color={colors.primary} 
+                    style={styles.uploadIcon}
+                  />
+                  <Text style={styles.uploadText}>Tap to upload payment proof</Text>
+                  <Text style={styles.uploadSubtext}>JPG, PNG (Max 5MB)</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {uploadError && (
+              <Text style={styles.errorText}>Please add image again</Text>
+            )}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <AppButton 
+              label={isUploading ? 'Uploading...' : 'Place Order'} 
+              onPress={placeOrder} 
+              disabled={!paymentImage || !address || isUploading}
+            />
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -673,6 +699,37 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     backgroundColor: '#f9f9f9',
   },
+  addressInputContainer: {
+    position: 'relative',
+  },
+  addressInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    paddingRight: 45,
+    fontSize: 14,
+    height: 80,
+    width: '100%',
+    textAlignVertical: 'top',
+    backgroundColor: '#f9f9f9',
+  },
+  locationIconContainer: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   nameInput: {
     minHeight: 40,
   },
@@ -783,4 +840,21 @@ paypalButtonText: {
   fontWeight: '600',
 },
 
+anotherPaymentButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#f8f9fa',
+  borderWidth: 1,
+  borderColor: colors.primary,
+  borderRadius: 8,
+  padding: 16,
+  paddingHorizontal: 20,
+},
+
+anotherPaymentButtonText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: colors.primary,
+},
 });

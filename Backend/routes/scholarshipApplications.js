@@ -3,6 +3,7 @@ const router = express.Router();
 const ScholarshipApplication = require('../models/ScholarshipApplication');
 const sendEmail = require('../Utils/sendEmail');
 const Notification = require('../models/Notification');
+const User = require('../models/user');
 
 /* =========================
    HELPER FUNCTION
@@ -63,26 +64,31 @@ router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
 
   try {
+    console.log('🔄 Updating scholarship application status:', { id: req.params.id, status });
+    
     const app = await ScholarshipApplication.findById(req.params.id);
 
     if (!app) {
+      console.log('❌ Application not found:', req.params.id);
       return res.status(404).json({ message: 'Application not found' });
     }
 
+    console.log('✅ Application found:', { fullName: app.fullName, email: app.email, currentStatus: app.status });
+
     app.status = status;
-    const User = require('../models/user');
 
-if (status === 'approved') {
-  const user = await User.findOne({ email: app.email });
+    if (status === 'approved') {
+      const user = await User.findOne({ email: app.email });
 
-  if (!user) {
-    console.warn('Approved applicant has no user account:', app.email);
-  }
+      if (!user) {
+        console.warn('⚠️ Approved applicant has no user account:', app.email);
+      }
 
-  app.approvedUser = user ? user._id : null;
-}
+      app.approvedUser = user ? user._id : null;
+    }
 
     await app.save();
+    console.log('✅ Application status updated in database');
 
     let subject = '';
     let message = '';
@@ -119,16 +125,27 @@ Leleaninternational Scholarship Program foundation
 `;
     }
 
-    // SEND EMAIL
-    await sendEmail(app.email, subject, message);
+    // SEND EMAIL - Add error handling
+    let emailError = null;
+    try {
+      await sendEmail(app.email, subject, message);
+      console.log('✅ Email sent successfully to:', app.email);
+    } catch (emailError) {
+      emailError = emailError;
+      console.error('❌ Email sending failed:', emailError);
+      // Continue with status update even if email fails
+    }
 
     res.json({
-      message: 'Status updated successfully and email sent',
+      message: 'Status updated successfully' + (emailError ? ' (email failed)' : ' and email sent'),
       application: app,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error in status update:', err);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
