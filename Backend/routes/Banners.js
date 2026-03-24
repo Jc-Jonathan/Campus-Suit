@@ -41,6 +41,9 @@ router.post('/upload', upload.single('image'), async (req, res) => {
       folder: 'banners',
       resource_type: 'image',
       public_id: `banner_${Date.now()}`,
+      transformation: [
+        { width: 700, height: 1200, crop: 'fill' }, // Optimize for banner size
+      ]
     });
 
     console.log('✅ Cloudinary Upload Success:', {
