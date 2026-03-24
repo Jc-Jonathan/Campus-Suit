@@ -92,21 +92,7 @@ export default function NotificationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // Debug: Log notifications when they change
-  useEffect(() => {
-    console.log('📋 Notifications loaded:', {
-      count: notifications.length,
-      userEmail: user?.email,
-      notifications: notifications.map((n: Notification) => ({
-        id: n._id,
-        category: n.category,
-        message: n.message?.substring(0, 50) + '...',
-        hasOrderDetails: !!n.orderDetails,
-        targetUsers: n.targetUsers
-      }))
-    });
-  }, [notifications, user?.email]);
-
+  
   // Helper function to render formatted message with colored text
   const renderFormattedMessage = (message: string, category: string, item: any) => {
     const userId = user?._id || user?.userId?.toString() || '';
@@ -210,16 +196,6 @@ export default function NotificationScreen() {
       const totalAmount = item.orderDetails?.totalAmount || 0;
       const status = item.orderDetails?.status;
       
-      // Debug: Log the actual data structure
-      console.log('🔍 Shop notification data:', {
-        item: item,
-        orderDetails: item.orderDetails,
-        customerName,
-        itemCount,
-        totalAmount,
-        status
-      });
-      
       return (
         <>
           <Text style={[styles.message, messageStyle]}>
@@ -314,10 +290,6 @@ export default function NotificationScreen() {
       // Use the new refreshNotifications function for better performance
       await refreshNotifications();
       
-      // Debug: Log notifications data
-      console.log('Loaded notifications:', notifications);
-      console.log('Filter applied:', filter);
-      
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to load notifications');
@@ -403,25 +375,10 @@ export default function NotificationScreen() {
     ? notifications.filter((notification: Notification) => {
         // Additional client-side filtering to ensure user-specific notifications
         const shouldShow = shouldShowNotification(notification, user?.email);
-        console.log('🔍 Filtering notification (ALL):', {
-          id: notification._id,
-          category: notification.category,
-          message: notification.message?.substring(0, 50) + '...',
-          userEmail: user?.email,
-          shouldShow: shouldShow
-        });
         return shouldShow;
       })
     : notifications.filter((notification: Notification) => {
         const shouldShow = notification.category === filter && shouldShowNotification(notification, user?.email);
-        console.log('🔍 Filtering notification (FILTERED):', {
-          id: notification._id,
-          category: notification.category,
-          filter: filter,
-          message: notification.message?.substring(0, 50) + '...',
-          userEmail: user?.email,
-          shouldShow: shouldShow
-        });
         return shouldShow;
       });
 
@@ -601,25 +558,6 @@ export default function NotificationScreen() {
           const userId = user?._id || user?.userId?.toString() || '';
           const unread = !item.readBy?.includes(userId);
 
-          // Debug log for all notifications
-          console.log('🔍 Rendering notification item:', {
-            id: item._id,
-            category: item.category,
-            message: item.message?.substring(0, 50) + '...',
-            unread: unread,
-            hasOrderDetails: !!item.orderDetails
-          });
-
-          // Debug log for shop notifications
-          if (item.category === 'SHOP') {
-            console.log('Shop Notification Item:', {
-              id: item._id,
-              orderDetails: item.orderDetails,
-              hasOrderDetails: !!item.orderDetails,
-              orderItems: item.orderDetails?.items
-            });
-          }
-
           return (
             <TouchableOpacity
               style={[styles.card, unread && styles.unreadCard]}
@@ -627,8 +565,8 @@ export default function NotificationScreen() {
               onPress={async () => {
                 if (unread) {
                   await markAsRead(item._id);
-                  // Refresh notifications to get updated read state
-                  await loadNotifications();
+                  // Refresh unread count to update the badge
+                  await fetchUnreadCount();
                 }
                 
                 // Toggle expansion for shop and loan notifications
@@ -643,14 +581,7 @@ export default function NotificationScreen() {
               </View>
 
               {/* MESSAGE */}
-              {(() => {
-                console.log('🔍 About to render message:', {
-                  message: item.message,
-                  category: item.category,
-                  hasOrderDetails: !!item.orderDetails
-                });
-                return renderFormattedMessage(item.message, item.category, item);
-              })()}
+              {renderFormattedMessage(item.message, item.category, item)}
 
                             
               {/* SHOW MORE/SHOW LESS BUTTON FOR LOAN NOTIFICATIONS */}

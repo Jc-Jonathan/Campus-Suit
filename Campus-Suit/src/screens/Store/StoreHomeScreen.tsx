@@ -14,13 +14,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Picker } from '@react-native-picker/picker';
 import { TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 type StoreHomeScreenNavigationProp =
   NativeStackNavigationProp<RootStackParamList, 'ProductDetail'>;
 
 const { width } = Dimensions.get('window');
-const GAP = 12;
-const CARD_WIDTH = (width - GAP * 3) / 2;
+const GAP = 6;
+const CARD_WIDTH = (width - GAP * 6) / 3; // Account for left padding, right padding, and 2 gaps between cards
 
 interface Product {
   productId: number;
@@ -115,50 +116,61 @@ useEffect(() => {
   return (
     <View style={styles.container}>
       <View style={styles.filters}>
-  {/* PRODUCT TYPE */}
-  <Picker
-    selectedValue={selectedType}
-    onValueChange={value => setSelectedType(value)}
-  >
-    <Picker.Item label="All Types" value="" />
-    {Array.isArray(types) && types.map(type => (
-      <Picker.Item key={type} label={type} value={type} />
-    ))}
-  </Picker>
+        {/* DROPDOWNS ROW */}
+        <View style={styles.dropdownsRow}>
+          {/* PRODUCT TYPE */}
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={selectedType}
+              onValueChange={value => setSelectedType(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="All Types" value="" />
+              {Array.isArray(types) && types.map(type => (
+                <Picker.Item key={type} label={type} value={type} />
+              ))}
+            </Picker>
+          </View>
 
-  {/* PRODUCT BRAND */}
-  <Picker
-    selectedValue={selectedBrand}
-    onValueChange={value => setSelectedBrand(value)}
-  >
-    <Picker.Item label="All Brands" value="" />
-    {Array.isArray(brands) && brands.map(brand => (
-      <Picker.Item key={brand} label={brand} value={brand} />
-    ))}
-  </Picker>
+          {/* PRODUCT BRAND */}
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={selectedBrand}
+              onValueChange={value => setSelectedBrand(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="All Brands" value="" />
+              {Array.isArray(brands) && brands.map(brand => (
+                <Picker.Item key={brand} label={brand} value={brand} />
+              ))}
+            </Picker>
+          </View>
+        </View>
 
-  {/* SEARCH */}
-  <TextInput
-  placeholder="Search product name..."
-  value={searchInput}
-  onChangeText={setSearchInput}
-  style={styles.search}
-/>
-<Pressable
-  style={styles.searchBtn}
-  onPress={() => {
-    setSearchQuery(searchInput);
-  }}
->
-  <Text style={styles.searchBtnText}>Search</Text>
-</Pressable>
-
-</View>
+        {/* SEARCH ROW */}
+        <View style={styles.searchRow}>
+          <TextInput
+            placeholder="Search product name..."
+            value={searchInput}
+            onChangeText={setSearchInput}
+            style={styles.searchInput}
+          />
+          <Pressable
+            style={styles.searchIconBtn}
+            onPress={() => {
+              setSearchQuery(searchInput);
+            }}
+          >
+            <Ionicons name="search" size={16} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
 
       <Text style={styles.heading}>All Products</Text>
       <FlatList
         data={products}
-        numColumns={2}
+        numColumns={3}
+        key={3}
         keyExtractor={item => item.productId.toString()}
         columnWrapperStyle={{ gap: GAP }}
         contentContainerStyle={styles.list}
@@ -208,39 +220,59 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    fontSize: 25,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0e5eaeff',
+    color: '#0d0627e0',
     alignSelf: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
  filters: {
-  paddingHorizontal: 12,
-  marginBottom: 10,
-},
-searchBtn: {
-  backgroundColor: '#0e5eaeff',
-  paddingVertical: 12,
-  borderRadius: 10,
-  marginTop: 10,
-  alignItems: 'center',
-},
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
 
-searchBtnText: {
-  color: '#fff',
-  fontWeight: '700',
-},
+  dropdownsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
 
+  dropdownContainer: {
+    flex: 1,
+  },
 
-search: {
-  backgroundColor: '#fff',
-  padding: 10,
-  borderRadius: 10,
-  marginTop: 8,
-  borderWidth: 1,
-  borderColor: '#ddd',
-},
+  picker: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    fontSize: 14,
+  },
+
+  searchRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    fontSize: 14,
+  },
+
+  searchIconBtn: {
+    backgroundColor: '#0d0627e0',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   list: {
     paddingHorizontal: 12,
@@ -250,12 +282,12 @@ search: {
   card: {
     width: CARD_WIDTH,
     backgroundColor: '#fff',
-    borderRadius: 14,
-    marginBottom: 16,
-
+    borderRadius: 10,
+    marginBottom: 10,
+    
     // iOS shadow
     shadowColor: '#000',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.06, 
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
 
@@ -265,22 +297,22 @@ search: {
 
   image: {
     width: '100%',
-    height: 160,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+    height: 100,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
     backgroundColor: '#eee',
   },
 
   info: {
-    padding: 10,
+    padding: 6,
   },
 
   name: {
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: '500',
     color: '#222',
-    marginBottom: 6,
-    lineHeight: 16,
+    marginBottom: 3,
+    lineHeight: 12,
   },
 
   priceRow: {
@@ -290,13 +322,13 @@ search: {
   },
 
   newPrice: {
-    fontSize: 15,
+    fontSize: 11,
     fontWeight: '700',
     color: '#000',
   },
 
   oldPrice: {
-    fontSize: 12,
+    fontSize: 9,
     color: '#ac0d0dff',
     textDecorationLine: 'line-through',
   },

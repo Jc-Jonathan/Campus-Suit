@@ -11,6 +11,7 @@ import { SearchScreen } from '../screens/Common/SearchScreen';
 import NotificationScreen from '../screens/Common/NotificationsScreen';
 import { OrderDetailshow } from '../screens/Admin/ProductsComp/OrderDetailshow';
 import { AuthFlow } from './AuthFlow';
+import PayPalScreen from '../screens/Payment/PaypalScreen';
 
 export type StoreStackParamList = {
   StoreHome: undefined;
@@ -24,6 +25,7 @@ export type StoreStackParamList = {
   Search: undefined;
   Notifications: undefined;
   AuthFlow: undefined;
+  PaypalScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<StoreStackParamList>();
@@ -41,5 +43,6 @@ export const StoreStack = () => (
     <Stack.Screen name="Search" component={SearchScreen} />
     <Stack.Screen name="Notifications" component={NotificationScreen} />
     <Stack.Screen name="AuthFlow" component={AuthFlow} />
+    <Stack.Screen name="PaypalScreen" component={PayPalScreen} />
   </Stack.Navigator>
 );

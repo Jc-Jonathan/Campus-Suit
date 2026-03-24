@@ -55,76 +55,94 @@ export const NotificationProvider = ({ children }: any) => {
 
     const url =
       category
-        ? `${API}/user?category=${category}`
-        : `${API}/user`;
+        ? `${API}/api/notifications?category=${category}`
+        : `${API}/api/notifications`;
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${userToken}` },
-    });
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
 
-    const data = await res.json();
-    
-    console.log('All notifications received from backend:', data);
-    
-    // Filter notifications based on user email for user-specific notifications
-    const filteredData = data.filter((notification: any) => {
-      // For announcements, show to all users
-      if (notification.category === 'ANNOUNCEMENT') {
+      // Check if response is HTML (error page) instead of JSON
+      const responseText = await res.text();
+      if (responseText.trim().startsWith('<')) {
+        console.error('❌ Server returned HTML instead of JSON for notifications');
+        setNotifications([]);
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ JSON Parse Error in notifications:', parseError);
+        setNotifications([]);
+        return;
+      }
+      
+      if (!res.ok) {
+        console.error('❌ Failed to fetch notifications:', data);
+        setNotifications([]);
+        return;
+      }
+      
+            
+      // Filter notifications based on user email for user-specific notifications
+      const filteredData = data.filter((notification: any) => {
+        // For announcements, show to all users
+        if (notification.category === 'ANNOUNCEMENT') {
+          return true;
+        }
+        
+        // For loan notifications, check if the notification belongs to the current user
+        if (notification.category === 'LOAN') {
+          // Check if notification has loanInfo with applicantEmail that matches current user
+          if (notification.loanInfo?.applicantEmail) {
+            return notification.loanInfo.applicantEmail === user?.email;
+          }
+          // Check if notification has reader field that matches current user
+          if (notification.loanInfo?.reader) {
+            return notification.loanInfo.reader === user?.email;
+          }
+        }
+        
+        // For scholarship notifications, check if the notification belongs to the current user
+        if (notification.category === 'SCHOLARSHIP') {
+          if (notification.scholarshipInfo?.applicantEmail) {
+            return notification.scholarshipInfo.applicantEmail === user?.email;
+          }
+          if (notification.reader) {
+            return notification.reader === user?.email;
+          }
+        }
+        
+        // For shop notifications, check if notification belongs to current user
+        if (notification.category === 'SHOP') {
+          // Check if current user's email is in targetEmails array
+          if (notification.targetEmails && notification.targetEmails.length > 0) {
+            return notification.targetEmails.includes(user?.email);
+          }
+          
+          // Fallback to old logic for backward compatibility
+          if (notification.shopInfo?.customerEmail) {
+            return notification.shopInfo.customerEmail === user?.email;
+          }
+          if (notification.targetUser) {
+            return notification.targetUser === user?.email;
+          }
+        }
+        
+        // Default: show notification if no specific email filtering is required
         return true;
-      }
+      });
       
-      // For loan notifications, check if the notification belongs to the current user
-      if (notification.category === 'LOAN') {
-        // Check if notification has loanInfo with applicantEmail that matches current user
-        if (notification.loanInfo?.applicantEmail) {
-          return notification.loanInfo.applicantEmail === user?.email;
-        }
-        // Check if notification has reader field that matches current user
-        if (notification.loanInfo?.reader) {
-          return notification.loanInfo.reader === user?.email;
-        }
-      }
-      
-      // For scholarship notifications, check if the notification belongs to the current user
-      if (notification.category === 'SCHOLARSHIP') {
-        if (notification.scholarshipInfo?.applicantEmail) {
-          return notification.scholarshipInfo.applicantEmail === user?.email;
-        }
-        if (notification.reader) {
-          return notification.reader === user?.email;
-        }
-      }
-      
-      // For shop notifications, check if notification belongs to current user
-      if (notification.category === 'SHOP') {
-        console.log('Shop notification filtering:', {
-          targetEmails: notification.targetEmails,
-          currentUserEmail: user?.email,
-          isInTargetEmails: notification.targetEmails?.includes(user?.email)
-        });
-        
-        // Check if current user's email is in targetEmails array
-        if (notification.targetEmails && notification.targetEmails.length > 0) {
-          return notification.targetEmails.includes(user?.email);
-        }
-        
-        // Fallback to old logic for backward compatibility
-        if (notification.shopInfo?.customerEmail) {
-          return notification.shopInfo.customerEmail === user?.email;
-        }
-        if (notification.targetUser) {
-          return notification.targetUser === user?.email;
-        }
-      }
-      
-      // Default: show notification if no specific email filtering is required
-      return true;
-    });
-    
-    console.log('Filtered notifications for user:', filteredData);
-    setNotifications(filteredData);
+            setNotifications(filteredData);
+    } catch (error) {
+      console.error('❌ Error fetching notifications:', error);
+      setNotifications([]);
+    }
   },
-  [userToken, user?.email]
+  [userToken, user?.email, shouldShowNotifications]
 );
 
 
@@ -134,32 +152,71 @@ export const NotificationProvider = ({ children }: any) => {
       return;
     }
 
-    const res = await fetch(`${API}/unread-count`, {
-      headers: { Authorization: `Bearer ${userToken}` },
-    });
+    try {
+      const res = await fetch(`${API}/api/notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
 
-    const data = await res.json();
-    setUnreadCount(data.count ?? 0);
+      // Check if response is HTML (error page) instead of JSON
+      const responseText = await res.text();
+      if (responseText.trim().startsWith('<')) {
+        console.error('❌ Server returned HTML instead of JSON for unread count');
+        setUnreadCount(0);
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ JSON Parse Error in unread count:', parseError);
+        setUnreadCount(0);
+        return;
+      }
+
+      if (!res.ok) {
+        console.error('❌ Failed to fetch unread count:', data);
+        setUnreadCount(0);
+        return;
+      }
+
+      setUnreadCount(data.count ?? 0);
+    } catch (error) {
+      console.error('❌ Error fetching unread count:', error);
+      setUnreadCount(0);
+    }
   }, [userToken, shouldShowNotifications]);
 
   const markAsRead = async (id: string) => {
   if (!userToken) return;
 
-  await fetch(`${API}/${id}/read`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${userToken}` },
-  });
+  try {
+    const res = await fetch(`${API}/api/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
 
-  // Update local state to reflect the change immediately
-  setNotifications(prev => 
-    prev.map(notification => 
-      notification._id === id 
-        ? { ...notification, readBy: [...(notification.readBy || []), user?._id || user?.userId?.toString() || ''] }
-        : notification
-    )
-  );
+    if (!res.ok) {
+      console.error('❌ Failed to mark notification as read:', res.status);
+      return;
+    }
 
-  fetchUnreadCount();
+    // Update local state to reflect the change immediately
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification._id === id 
+          ? { ...notification, readBy: [...(notification.readBy || []), user?._id || user?.userId?.toString() || ''] }
+          : notification
+      )
+    );
+
+    // Update unread count
+    fetchUnreadCount();
+    
+    console.log('✅ Notification marked as read:', id);
+  } catch (error) {
+    console.error('❌ Error marking notification as read:', error);
+  }
 };
 
 // Manual refresh function for immediate updates
@@ -387,10 +444,13 @@ const addNotification = async (notificationData: {
   amount: string,
   interestRate: string
 ) => {
-  if (!userToken) return;
+  if (!userToken) {
+    console.error('❌ No user token available for loan notification');
+    return;
+  }
   
   try {
-    const message = `Hello ${applicantName},\n\nCongradulation on your application for ${loanName} under this ${interestRate}% intrest rate for this $${amount} amount always check your email for further process`;
+    const message = `Hello ${applicantName},\n\nCongratulations on your application for ${loanName} under this ${interestRate}% interest rate for this $${amount} amount. Always check your email for further process.`;
 
     const notificationData = {
       message,
@@ -406,7 +466,15 @@ const addNotification = async (notificationData: {
       }
     };
 
-    const res = await fetch(`${API}/loan`, {
+    console.log('📤 Creating loan application notification:', {
+      applicantName,
+      applicantEmail,
+      loanName,
+      amount,
+      interestRate
+    });
+
+    const res = await fetch(`${API}/api/notifications/loan`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -419,18 +487,20 @@ const addNotification = async (notificationData: {
       // Refresh notifications to show the new one
       fetchNotifications();
       fetchUnreadCount();
-      console.log('✅ Loan application notification created:', notificationData);
+      console.log('✅ Loan application notification created successfully:', notificationData);
     } else {
       const errorData = await res.json().catch(() => ({}));
-      console.error('Server response error:', {
+      console.error('❌ Server response error for loan notification:', {
         status: res.status,
         statusText: res.statusText,
         errorData
       });
-      throw new Error(errorData.message || 'Failed to create loan application notification');
+      throw new Error(errorData.message || `Failed to create loan application notification (Status: ${res.status})`);
     }
   } catch (error) {
     console.error('❌ Error creating loan application notification:', error);
+    // Re-throw the error so the calling function knows it failed
+    throw error;
   }
 };
 

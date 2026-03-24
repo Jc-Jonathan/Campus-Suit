@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 10,
   },
-  storeTitle: {
+  storeTitle: { 
     color: '#fff',
     fontSize: 20,
     fontWeight: '700',

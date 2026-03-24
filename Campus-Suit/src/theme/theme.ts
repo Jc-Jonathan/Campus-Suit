@@ -1,7 +1,8 @@
 export const colors = {
-  background: '#F5F7FB',
-  surface: '#FFFFFF',
-  primary: '#2563EB',
+  background: '#e5dedeff',
+  surface: '#ffffffff',
+  primary: '#0d0627e0',
+  primaryGradient: ['#0D0627', '#1a0d4dff', '#2514736c'] as const,
   primarySoft: '#DBEAFE',
   accent: '#22C55E',
   success: '#22C55E',

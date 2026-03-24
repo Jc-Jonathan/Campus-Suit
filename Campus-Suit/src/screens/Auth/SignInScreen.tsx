@@ -298,6 +298,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    borderRadius: 10,
+    padding:10,
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
   },

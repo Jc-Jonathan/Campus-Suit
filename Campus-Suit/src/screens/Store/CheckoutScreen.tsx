@@ -437,6 +437,12 @@ const placeOrder = async () => {
           disabled={!paymentImage || !address || isUploading}
         />
       </View>
+      <TouchableOpacity 
+        style={styles.paypalButton}
+        onPress={() => navigation.navigate('PaypalScreen')}
+      >
+        <Text style={styles.paypalButtonText}>Pay with PayPal</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -754,6 +760,27 @@ mapContainer: {
 map: {
   width: '100%',
   height: '100%',
+},
+
+paypalButton: {
+  backgroundColor: '#0070ba',
+  borderRadius: 8,
+  padding: 16,
+  alignItems: 'center',
+  marginTop: 12,
+  flexDirection: 'row',
+  justifyContent: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+
+paypalButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '600',
 },
 
 });

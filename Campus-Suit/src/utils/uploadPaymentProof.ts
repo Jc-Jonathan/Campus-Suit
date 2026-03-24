@@ -31,7 +31,7 @@ export const uploadPaymentProof = async (imageUri: string): Promise<UploadedPaym
     
     // Upload to backend (which will handle Cloudinary)
     const response = await fetch(
-      'https://campus-suit-szub.onrender.com',
+      'https://campus-suit-szub.onrender.com/api/upload',
       {
         method: 'POST',
         body: formData,

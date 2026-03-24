@@ -6,7 +6,6 @@ import { Header } from '../../components/Header';
 import { AppCard } from '../../components/AppCard';
 import { theme } from '../../theme/theme';
 import { fetchLoanCalculation, LoanCalculation } from '../../services/loanService';
-import { useNotifications } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,7 +13,6 @@ export type LoanCalculationProps = NativeStackScreenProps<LoansStackParamList, '
 
 export const LoanCalculationScreen: React.FC<LoanCalculationProps> = ({ route, navigation }: LoanCalculationProps) => {
   const { loanId, loanTitle, amount, interestRate, repaymentPeriod } = route.params;
-  const { createLoanNotification } = useNotifications();
   const { user } = useAuth();
 
   const [calculation, setCalculation] = useState<LoanCalculation | null>(null);
@@ -29,37 +27,6 @@ export const LoanCalculationScreen: React.FC<LoanCalculationProps> = ({ route, n
       const response = await fetchLoanCalculation(loanId);
       console.log('Calculation response:', response);
       setCalculation(response.calculation);
-
-      // Send notification if loan is approved and user is logged in
-      if (response.calculation.isApproved && user?.email) {
-        const readerName = user.email.split('@')[0];
-
-        // Send notification for amount increase
-        if (response.calculation.elapsedPeriods > 0 && response.calculation.interestAccrued > 0) {
-          createLoanNotification(
-            readerName,
-            loanTitle,
-            response.calculation.originalAmount,
-            response.calculation.currentAmount,
-            response.calculation.interestRate || interestRate,
-            response.calculation.repaymentPeriod || repaymentPeriod,
-            'amount_increase'
-          );
-        }
-
-        // Send completion notification
-        if (response.calculation.isCompleted) {
-          createLoanNotification(
-            readerName,
-            loanTitle,
-            response.calculation.originalAmount,
-            response.calculation.currentAmount,
-            response.calculation.interestRate || interestRate,
-            response.calculation.repaymentPeriod || repaymentPeriod,
-            'repayment_completed'
-          );
-        }
-      }
     } catch (err: any) {
       console.error('Error fetching calculation:', err);
       
@@ -84,17 +51,18 @@ export const LoanCalculationScreen: React.FC<LoanCalculationProps> = ({ route, n
     fetchCalculation();
   }, [loanId]);
 
-  // Auto-refresh calculation every 1 second for active loans
-  useEffect(() => {
-    if (!calculation?.isApproved || calculation?.isCompleted) return;
+  // Auto-refresh disabled to prevent server overload and JSON parse errors
+  // Users can manually refresh using the refresh button
+  // useEffect(() => {
+  //   if (!calculation?.isApproved || calculation?.isCompleted) return;
 
-    const interval = setInterval(() => {
-      setRefreshing(true);
-      fetchCalculation();
-    }, 1000);
+  //   const interval = setInterval(() => {
+  //     setRefreshing(true);
+  //     fetchCalculation();
+  //   }, 5000); // Increased from 1 second to 5 seconds
 
-    return () => clearInterval(interval);
-  }, [calculation?.isApproved, calculation?.isCompleted, loanId]);
+  //   return () => clearInterval(interval);
+  // }, [calculation?.isApproved, calculation?.isCompleted, loanId]);
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -223,7 +191,7 @@ export const LoanCalculationScreen: React.FC<LoanCalculationProps> = ({ route, n
                 • Current amount includes accumulated interest
               </Text>
               <Text style={styles.infoText}>
-                • Data refreshes automatically every 1 second
+                • Tap the Refresh button to update current amount
               </Text>
             </>
           ) : (

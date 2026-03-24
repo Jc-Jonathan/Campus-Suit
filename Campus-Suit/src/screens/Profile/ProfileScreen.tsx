@@ -89,7 +89,7 @@ export const ProfileScreen = ({ navigation }: any) => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <LinearGradient
-          colors={[theme.colors.primary, '#bec2f6ff']}
+          colors={theme.colors.primaryGradient}
           style={styles.profileHeader}
         >
           <View style={styles.avatarContainer}>

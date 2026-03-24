@@ -339,13 +339,29 @@ useEffect(() => {
       }
 
       // Create loan application notification after successful submission
-      await createLoanApplicationNotification(
-        fullName,
-        email,
-        loanTitle,
-        amount,
-        interestRate
-      );
+      try {
+        console.log('📤 About to create loan notification with data:', {
+          fullName,
+          email,
+          loanTitle,
+          amount,
+          interestRate
+        });
+        
+        await createLoanApplicationNotification(
+          fullName,
+          email,
+          loanTitle,
+          amount,
+          interestRate
+        );
+        console.log('✅ Loan notification created successfully');
+      } catch (notificationError) {
+        console.error('⚠️ Failed to create loan notification:', notificationError);
+        // Don't fail the entire submission if notification fails, but log it
+        // The loan application was still submitted successfully
+        // You might want to show a subtle message to the user
+      }
 
       Alert.alert(
         'Application Submitted',
@@ -458,7 +474,7 @@ useEffect(() => {
               getCurrentLocation();
             }}
           >
-            <Ionicons name="location" size={24} color={theme.colors.primary} />
+            <Ionicons name="location-outline" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
 

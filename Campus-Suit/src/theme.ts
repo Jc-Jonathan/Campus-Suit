@@ -1,6 +1,8 @@
 export const theme = {
   colors: {
-    primary: '#007AFF',
+    primary: ["#a074daff", "#8565b8ff", "#8662c5ff"],
+    primarySolid: "#8e69c9ff",
+    primaryGradient: "linear-gradient(180deg, #a074daff 0%, #8565b8ff 50%, #8662c5ff 100%)",
     background: '#F5F5F5',
     card: '#FFFFFF',
     text: '#000000',
