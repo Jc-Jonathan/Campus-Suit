@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { StoreStackParamList } from '../../navigation/StoreStack';
+import type { StoreStackParamList } from '../../navigation/types.d';
 
 interface Product {
   productId: number;

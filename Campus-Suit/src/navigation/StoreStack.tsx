@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StoreStackParamList } from './types.d';
 import { StoreHomeScreen } from '../screens/Store/StoreHomeScreen';
 import { ProductDetailScreen } from '../screens/Store/ProductDetailScreen';
 import { CartScreen } from '../screens/Store/CartScreen';
@@ -12,21 +13,6 @@ import NotificationScreen from '../screens/Common/NotificationsScreen';
 import { OrderDetailshow } from '../screens/Admin/ProductsComp/OrderDetailshow';
 import { AuthFlow } from './AuthFlow';
 import PayPalScreen from '../screens/Payment/PaypalScreen';
-
-export type StoreStackParamList = {
-  StoreHome: undefined;
-  ProductDetail: { productId: number};
-  Cart: undefined;
-  Checkout: { cartItems: any[], totalPrice: number, source?: 'cart' | 'product' };
-  Tracking: { orderId?: number };
-  OrderDisplay: undefined;
-  OrderDetailshow: { orderId: number };
-  OrderStatus: { id?: string } | undefined;
-  Search: undefined;
-  Notifications: undefined;
-  AuthFlow: undefined;
-  PaypalScreen: undefined;
-};
 
 const Stack = createNativeStackNavigator<StoreStackParamList>();
 

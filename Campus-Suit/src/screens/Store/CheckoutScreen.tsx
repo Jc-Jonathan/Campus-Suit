@@ -16,7 +16,7 @@ import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { StoreStackParamList } from '../../navigation/StoreStack';
+import { StoreStackParamList } from '../../navigation/types.d';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -439,7 +439,7 @@ const placeOrder = async () => {
       </View>
       <TouchableOpacity 
         style={styles.paypalButton}
-        onPress={() => navigation.navigate('PaypalScreen')}
+        onPress={() => navigation.navigate('PaypalScreen', { amount: totalAmount })}
       >
         <Text style={styles.paypalButtonText}>Pay with PayPal</Text>
       </TouchableOpacity>

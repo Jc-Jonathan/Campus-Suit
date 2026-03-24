@@ -42,7 +42,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
       resource_type: 'image',
       public_id: `banner_${Date.now()}`,
       transformation: [
-        { width: 1200, height: 400, crop: 'fill' }, // Optimize for banner size
+        { width: 700, height: 1200, crop: 'fill' }, // Optimize for banner size
       ]
     });
 
