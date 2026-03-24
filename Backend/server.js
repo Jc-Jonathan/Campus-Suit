@@ -38,6 +38,7 @@ app.use('/api/notifications', require('./routes/Notifications'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/userorders', require('./routes/UserOrders'));
 app.use('/api/paypal', require('./routes/paypal'));
+app.use('/api/send-email', require('./routes/send-email'));
 /* 🔹 Server */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT,() => {

@@ -66,33 +66,14 @@ const ApplicantDetail = ({ route, navigation }: any) => {
     try {
       setLoading(true);
       
+      console.log('🔄 Updating status with:', { id, status, url: `${API_URL}/${id}/status` });
+      
       // Update the application status
-      await axios.patch(`${API_URL}/${id}/status`, { status });
+      const response = await axios.patch(`${API_URL}/${id}/status`, { status });
+      console.log('✅ Status update response:', response.data);
       
-      // Prepare email content
-      const emailSubject = status === 'approved' 
-        ? `Congratulations on Your Scholarship Approval - ${app.scholarshipTitle}`
-        : `Scholarship Application Status Update - ${app.scholarshipTitle}`;
-      
-      const emailMessage = status === 'approved'
-        ? `Hello ${app.fullName},\n\nCongratulations! Your application for the ${app.scholarshipTitle} scholarship has been approved.\n\nBest regards,\nCampus Support Team`
-        : `Hello ${app.fullName},\n\nYour application for the ${app.scholarshipTitle} scholarship has been denied.\n\nWe encourage you to try applying again next time.\n\nGood day,\nCampus Support Team`;
-      
-      // Try to send email notification (don't fail if this doesn't work)
-      try {
-        await axios.post('https://campus-suit-szub.onrender.com/api/send-email', {
-          to: app.email,
-          subject: emailSubject,
-          message: emailMessage,
-          type: 'scholarship-status'
-        });
-        console.log('Email sent successfully to:', app.email);
-      } catch (emailError) {
-        console.warn('Email sending failed:', emailError);
-        // Continue with notification storage even if email fails
-      }
-      
-      console.log('Scholarship status notification will be sent by backend to:', app.email);
+      // Backend handles email sending automatically
+      console.log('📧 Scholarship status notification will be sent by backend to:', app.email);
       
       // Update the local state to reflect the change immediately
       setApp((prev: any | null) => prev ? { ...prev, status } : null);
@@ -107,12 +88,19 @@ const ApplicantDetail = ({ route, navigation }: any) => {
         navigation.goBack();
       }, 1500);
     } catch (err: any) {
-      console.error('Error updating status:', err);
+      console.error('❌ Error updating status:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config?.url
+      });
+      
       let errorMessage = 'Failed to update application status';
       
       if (err.response) {
-        console.error('Error response:', err.response.data);
-        errorMessage = err.response.data?.message || errorMessage;
+        console.error('❌ Error response:', err.response.data);
+        errorMessage = err.response.data?.message || err.response.data?.error || errorMessage;
       } else if (err.request) {
         errorMessage = 'No response from server. Please check your connection.';
       } else {
